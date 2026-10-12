@@ -216,9 +216,61 @@ function render(){
 }
 function rs(el){const pos=el.selectionStart;render();const i=view.querySelector('input');i.focus();i.setSelectionRange(pos,pos)}
 
-const LEG=`<div class="leg"><div><div class="lt">KATEGORI STOP 6</div><table class="lg">${[['A','APPARATUS','Terjepit mesin'],['B','BIG HEAVY','Kejatuhan benda berat'],['C','CAR','Tertabrak kendaraan'],['D','DROP','Terjatuh dari ketinggian'],['E','ELECTRICAL','Tersengat listrik atau akibat listrik'],['F','FIRE','Terkena panas atau kebakaran'],['O','OTHERS','Potensi bahaya diluar kategori diatas']].map(x=>`<tr><td class="k">${x[0]}</td><td>: ${x[1]} (${x[2]})</td></tr>`).join('')}</table></div>
-<div><div class="lt">RISK RANK</div><table class="lg">${[['A',['Kematian','Kehilangan anggota tubuh','Kehilangan fungsi tubuh']],['B',['Cidera','Produksi terhenti','Kehilangan hari kerja']],['C',['Cidera ringan','Produksi tidak terhenti','Tidak ada kehilangan hari kerja']]].map(x=>`<tr><td class="rr r${x[0]}">RANK ${x[0]}</td><td>${x[1].map(i=>'- '+i).join('<br>')}</td></tr>`).join('')}</table></div></div>`;
-let VR=[],LB=null;
+const STOPD=[['A','APPARATUS','Terjepit mesin'],['B','BIG HEAVY','Kejatuhan benda berat'],['C','CAR','Tertabrak kendaraan'],['D','DROP','Terjatuh dari ketinggian'],['E','ELECTRICAL','Tersengat listrik atau akibat listrik'],['F','FIRE','Terkena panas atau kebakaran'],['O','OTHERS','Potensi bahaya diluar kategori diatas']];
+const RISKD=[['A',['Kematian','Kehilangan anggota tubuh','Kehilangan fungsi tubuh']],['B',['Cidera','Produksi terhenti','Kehilangan hari kerja']],['C',['Cidera ringan','Produksi tidak terhenti','Tidak ada kehilangan hari kerja']]];
+// Keterangan zona pada lembar cetak (ubah sesuai kebutuhan)
+const ZONAD=[['Zona A','Warehouse, Charging P.Mover & Charging Forklift'],['Zona B','Local Process Lt.1, Shipping/Loading Dock, R.Admin Fakturis, TPS Domestik, Tangki Solar & R.Koperasi'],['Zona C','R.Trafo & Panel, R.Pompa, TPS LB3, R.Claim, R.Maintenance, R.Klinik & Posko Security'],['Zona D','R.Office Lt.2 & Local Process Lt.2']];
+const LOGO_ID='1mJkiTMn4jocwFRmjuBXZd5XslKQpyOV0';   // logo Astra Otoparts (file Google Drive, harus dibagikan "Siapa saja yang memiliki link")
+const LEG=`<div class="leg"><div><div class="lt">KATEGORI STOP 6</div><table class="lg">${STOPD.map(x=>`<tr><td class="k">${x[0]}</td><td>: ${x[1]} (${x[2]})</td></tr>`).join('')}</table></div>
+<div><div class="lt">RISK RANK</div><table class="lg">${RISKD.map(x=>`<tr><td class="rr r${x[0]}">RANK ${x[0]}</td><td>${x[1].map(i=>'- '+i).join('<br>')}</td></tr>`).join('')}</table></div></div>`;
+function printForm(){
+  if(!SH||!ld){alert('Data belum termuat atau tanggal belum dipilih.');return}
+  const inf=infoOf(),rows=SH.filter(x=>x.d===ld&&x.n===lt);
+  const tgl=new Date(ld+'T00:00:00').toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'});
+  const member='Tim '+lt+(inf.member?' ('+inf.member+')':'');
+  const mk=on=>`<td>${on?'<b>✓</b>':''}</td>`;
+  const img=id=>`<img src="https://lh3.googleusercontent.com/d/${id}=w400" referrerpolicy="no-referrer" onerror="if(!this.dataset.f){this.dataset.f=1;this.src='https://drive.google.com/thumbnail?id=${id}&sz=w400'}else{this.outerHTML='(foto)'}">`;
+  let body=rows.map((x,n)=>`<tr><td>${n+1}</td><td class="l">${esc(x.area)}</td><td class="l">${esc(x.temuan)}</td><td class="ph">${x.fotos.map(img).join('')||'-'}</td>`
+    +KAT.map(k=>mk(x.kat.includes(k.toLowerCase()))).join('')+STOP.map(k=>mk(x.stop.includes(k))).join('')+RISK.map(k=>mk(x.risk===k)).join('')+`<td class="l">${esc(x.saran)}</td></tr>`).join('');
+  for(let i=rows.length;i<2;i++)body+=`<tr class="bl">${'<td></td>'.repeat(18)}</tr>`;
+  const W=[3.5,9,18,15,4.5,4.5,4.5,2.6,2.6,2.6,2.6,2.6,2.6,2.6,2.6,2.6,2.6,14];
+  const doc=`<!DOCTYPE html><html lang="id"><head><meta charset="utf-8"><title>Checksheet Safety Patrol - Tim ${esc(lt)} - ${esc(ld)}</title><style>
+@page{size:A4 landscape;margin:8mm}
+*{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+body{font-family:Arial,Helvetica,sans-serif;font-size:10px;color:#000;margin:0;padding:8px}
+.bar{background:#f1f3f6;border:1px solid #ccd;padding:8px 12px;margin-bottom:10px;font-size:12px}.bar button{font:inherit;padding:6px 14px;margin-right:10px;cursor:pointer}
+@media print{.bar{display:none}body{padding:0}}
+.hd{display:grid;grid-template-columns:1fr 2fr 1fr;align-items:center;margin-bottom:6px}.logo{height:44px;display:block}
+h1{font-size:26px;text-align:center;margin:0;letter-spacing:.3px}
+.meta{margin:6px 0 8px;font-size:11px;line-height:1.5}.meta span:first-child{display:inline-block;width:78px}
+table{border-collapse:collapse}
+.t{width:100%;table-layout:fixed}.t th,.t td{border:1px solid #000;padding:3px 2px;text-align:center;vertical-align:middle;overflow-wrap:anywhere}
+.t th{background:#d9d9d9;font-size:10px}.t td.l{text-align:left;padding:3px 5px}.t td.ph img{width:100%;max-height:34mm;object-fit:cover;display:block;margin:2px 0}
+.t tr{page-break-inside:avoid}.t tr.bl td{height:16mm}
+.bt{display:flex;gap:14px;align-items:flex-start;margin-top:12px;page-break-inside:avoid}
+.c1{flex:1;min-width:60mm;font-size:12px}.c2{flex:1.7}.c3{flex:1.25}
+.sig{display:flex;gap:16px;margin-top:46px;font-size:12px}.sig div{text-align:left}
+.lt{font-weight:700;font-size:9px;margin-bottom:2px}
+.lg{width:100%;border:1px solid #000;font-size:9px}.lg td{padding:2px 6px;border-bottom:1px solid #999}.lg td.k{width:22px;text-align:center}
+.zn{margin-top:14px;font-size:10px}.zn td{padding:4px 6px;border-bottom:1px solid #000}
+.lg td.rr{font-weight:700;text-align:center;width:62px;border-right:1px solid #000}
+.rA{background:#ff3b0a}.rB{background:#ffff00}.rC{background:#1fb4f0}
+</style></head><body>
+<div class="bar"><button onclick="print()">🖨 Cetak / Simpan PDF</button><span>Pilih orientasi Landscape dan aktifkan "Background graphics" agar warna ikut tercetak.</span></div>
+<div class="hd"><div><img class="logo" src="https://lh3.googleusercontent.com/d/${LOGO_ID}=w400" referrerpolicy="no-referrer" alt="Astra Otoparts" onerror="this.style.display='none';this.nextElementSibling.style.display='block'"><b style="display:none;font-size:18px">ASTRA Otoparts</b></div><h1>CHECKSHEET SAFETY PATROL</h1><div></div></div>
+<div class="meta"><div><span>TANGGAL</span><span>: ${esc(tgl)}</span></div><div><span>MEMBER</span><span>: ${esc(member)}</span></div><div><span>ZONA</span><span>: ${esc(inf.zona)}</span></div></div>
+<table class="t"><colgroup>${W.map(w=>`<col style="width:${w}%">`).join('')}</colgroup><thead>
+<tr><th rowspan="2">NO</th><th rowspan="2">AREA</th><th rowspan="2">TEMUAN</th><th rowspan="2">KODE FOTO*</th><th colspan="3">KATEGORI</th><th colspan="7">STOP 6</th><th colspan="3">RISK RANK</th><th rowspan="2">SARAN TINDAKAN PERBAIKAN</th></tr>
+<tr>${KAT.map(k=>`<th style="font-size:8.5px">${k.toUpperCase()}</th>`).join('')}${STOP.map(k=>`<th>${k}</th>`).join('')}${RISK.map(k=>`<th>${k}</th>`).join('')}</tr></thead><tbody>${body}</tbody></table>
+<div class="bt"><div class="c1"><div style="font-size:10px;margin-bottom:10px">*) Kode foto : Nama Zona-Nomor temuan, misal : A1 (Zona A &amp; Temuan nomor 1)</div><div>Bekasi, ......................</div><div class="sig"><div>(______________)<br>Tim Patrol</div><div>(______________)<br>Tim Patrol</div></div></div>
+<div class="c2"><div class="lt">KATEGORI STOP 6</div><table class="lg">${STOPD.map(x=>`<tr><td class="k">${x[0]}</td><td>: ${x[1]} (${x[2]})</td></tr>`).join('')}</table>
+<table class="lg zn">${ZONAD.map(x=>`<tr><td><b>${x[0]}</b> : ${esc(x[1])}</td></tr>`).join('')}</table></div>
+<div class="c3"><div class="lt">RISK RANK</div><table class="lg">${RISKD.map(x=>`<tr><td class="rr r${x[0]}">RANK ${x[0]}</td><td>${x[1].map(i=>'- '+i).join('<br>')}</td></tr>`).join('')}</table></div></div>
+<script>onload=function(){setTimeout(function(){print()},500)}<\/script></body></html>`;
+  const w=window.open('','_blank');
+  if(!w){alert('Pop-up diblokir browser. Izinkan pop-up untuk situs ini lalu klik tombol lagi.');return}
+  w.document.open();w.document.write(doc);w.document.close();
+}
 function fotoHtml(x,ri){return x.fotos.length?x.fotos.map((id,j)=>`<a href="https://drive.google.com/open?id=${id}" onclick="openLB(${ri},${j});return false"><img class="ph" src="https://lh3.googleusercontent.com/d/${id}=w600" loading="lazy" referrerpolicy="no-referrer" alt="Foto temuan" onerror="if(!this.dataset.f){this.dataset.f=1;this.src='https://drive.google.com/thumbnail?id=${id}&sz=w600'}else{this.outerHTML='📷 Buka foto'}"></a>`).join(''):'-'}
 function openLB(ri,i){if(!VR[ri]||!VR[ri].fotos.length)return;LB={ri,i};showLB();try{history.pushState({lb:1},'')}catch(e){}}
 function showLB(){const x=VR[LB.ri],id=x.fotos[LB.i];lb.hidden=false;document.body.style.overflow='hidden';
@@ -241,7 +293,7 @@ function renderLeader(){
   const chips=inf.member.split(',').map(x=>x.trim()).filter(Boolean).map(m=>`<span class="b neu chip">${esc(m)}</span>`).join('')||'-';
   const zs=ZONES.includes(inf.zona)?ZONES:[...ZONES,inf.zona];
   h+=`<div class="card info"><div><div class="l" style="margin-bottom:4px">Tanggal Pemantauan</div><b>${fmt(ld)}</b></div><div><div class="l" style="margin-bottom:4px">Zona</div><select onchange="setZona(this.value)">${zs.map(z=>`<option value="${esc(z)}"${z===inf.zona?' selected':''}>${esc(z)}</option>`).join('')}</select></div><div><div class="l">Member <button class="sm" style="margin-left:6px" onclick="editInfo()">Edit</button></div>${chips}</div></div>`;
-  h+=`<div class="sec"><h3>Temuan - Tim ${lt}</h3><div><button class="sm" onclick="loadSheet()">↻ Muat ulang</button> <a class="btnl" href="${SHEET_URL}" target="_blank" rel="noopener">Buka Spreadsheet</a> <a class="btnl p" href="${FORM_URL}" target="_blank" rel="noopener">📝 Isi Form Temuan</a></div></div>`;
+  h+=`<div class="sec"><h3>Temuan - Tim ${lt}</h3><div><button class="sm" onclick="loadSheet()">↻ Muat ulang</button> <a class="btnl" href="${SHEET_URL}" target="_blank" rel="noopener">Buka Spreadsheet</a> <a class="btnl p" href="${FORM_URL}" target="_blank" rel="noopener">📝 Isi Form Temuan</a> <button class="btnl" onclick="printForm()">🖨 Print Persetujuan</button></div></div>`;
   if(shState==='idle'||shState==='loading'){view.innerHTML=h+'<div class="card empty">Memuat data dari Google Sheets…</div>';return}
   if(shState==='err'){view.innerHTML=h+`<div class="card empty" style="color:var(--r)">${esc(shErr)}</div>`;return}
   const rows=SH.filter(x=>x.d===ld&&x.n===lt);VR=rows;
