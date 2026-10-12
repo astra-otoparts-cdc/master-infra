@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Master Infra</title>
+<style>
+:root{--bg:#f4f6f9;--card:#fff;--tx:#1b2430;--mut:#6b7686;--line:#e2e7ee;--pri:#1f5eff;--side:#0f1b2d;--sidetx:#c9d3e3;--g:#0f8a4f;--gb:#e0f5ea;--w:#a86100;--wb:#fff1d6;--r:#c62828;--rb:#fde4e4;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0d1117;--card:#161c26;--tx:#e6ebf2;--mut:#8b97a8;--line:#273040;--pri:#5b8cff;--side:#080d15;--g:#4ade80;--gb:#12301f;--w:#fbbf24;--wb:#3a2c0c;--r:#f87171;--rb:#3a1717}}
+:root[data-theme="dark"]{--bg:#0d1117;--card:#161c26;--tx:#e6ebf2;--mut:#8b97a8;--line:#273040;--pri:#5b8cff;--side:#080d15;--g:#4ade80;--gb:#12301f;--w:#fbbf24;--wb:#3a2c0c;--r:#f87171;--rb:#3a1717}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:14px;display:flex;min-height:100vh}
+aside{width:250px;background:var(--side);color:var(--sidetx);padding:18px 12px;flex-shrink:0;position:sticky;top:0;height:100vh;overflow:auto}
+.logo{font-size:19px;font-weight:700;color:#fff;padding:4px 10px 16px;display:flex;gap:8px;align-items:center}
+.logo small{display:block;font-size:11px;font-weight:400;color:var(--sidetx)}
+.grp{font-size:11px;letter-spacing:.08em;text-transform:uppercase;margin:16px 10px 6px;color:#7f8ca3}
+aside a{display:block;padding:9px 12px;border-radius:8px;color:var(--sidetx);text-decoration:none;cursor:pointer;user-select:none}
+aside a:hover{background:rgba(255,255,255,.07)}
+aside a.on{background:var(--pri);color:#fff}
+.sub{margin:2px 0 4px 14px;border-left:1px solid rgba(255,255,255,.15)}.sub a{padding:7px 12px;font-size:13px}.car{float:right;opacity:.6}
+main{flex:1;min-width:0;padding:22px 26px}
+.top{display:flex;align-items:center;gap:12px;margin-bottom:18px}
+.top h1{font-size:22px;margin:0}
+.crumb{color:var(--mut);font-size:12px}
+#burger{display:none}
+button{font:inherit;cursor:pointer;border:1px solid var(--line);background:var(--card);color:var(--tx);border-radius:8px;padding:8px 14px}
+button.p{background:var(--pri);border-color:var(--pri);color:#fff}
+button.sm{padding:4px 9px;font-size:12px}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px}
+.card.k{cursor:pointer}.card.k:hover{border-color:var(--pri)}
+.card .n{font-size:28px;font-weight:700}.l{color:var(--mut);font-size:12px}
+.tools{display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap;align-items:flex-end}
+.lb{display:block;font-size:12px;color:var(--mut);margin-bottom:4px}
+input,select{font:inherit;border:1px solid var(--line);background:var(--card);color:var(--tx);border-radius:8px;padding:8px 10px;width:100%}
+.tools input.s{max-width:300px}
+.wrap{overflow-x:auto;background:var(--card);border:1px solid var(--line);border-radius:12px}
+table{border-collapse:collapse;width:100%;min-width:640px}
+th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);white-space:nowrap}
+th{font-size:12px;color:var(--mut);text-transform:uppercase;letter-spacing:.04em;background:var(--bg)}
+tr:last-child td{border-bottom:0}
+.fd{min-width:1150px}
+.fd th,.fd td{border:1px solid var(--line);padding:8px}
+.fd th{text-align:center;vertical-align:middle;color:var(--tx)}
+.fd td.c{text-align:center}.fd td.t{white-space:normal;min-width:170px}
+.ck{font-weight:700;color:var(--g)}.rkA{color:var(--r)}.rkB{color:var(--w)}
+.info{display:grid;grid-template-columns:1fr 1.6fr 1.2fr auto;gap:16px;align-items:start;margin-bottom:16px}
+.info b{font-size:15px}.chip{margin:2px 2px 0 0;display:inline-block}
+.sec{display:flex;align-items:center;justify-content:space-between;margin:6px 0 10px}.sec h3{margin:0}
+.b{padding:3px 9px;border-radius:99px;font-size:12px;font-weight:600}
+.good{background:var(--gb);color:var(--g)}.warn{background:var(--wb);color:var(--w)}.bad{background:var(--rb);color:var(--r)}.neu{background:var(--bg);color:var(--mut);border:1px solid var(--line)}
+.empty{padding:30px;text-align:center;color:var(--mut)}
+dialog{border:1px solid var(--line);border-radius:14px;background:var(--card);color:var(--tx);width:min(460px,92vw);padding:20px}
+dialog::backdrop{background:rgba(0,0,0,.5)}
+dialog label{display:block;font-size:12px;color:var(--mut);margin:10px 0 4px}
+.act{display:flex;justify-content:flex-end;gap:8px;margin-top:18px}
+.ph{width:110px;height:80px;object-fit:cover;border-radius:6px;display:block;margin:0 auto}
+.btnl{display:inline-block;padding:4px 9px;font-size:12px;border:1px solid var(--line);border-radius:8px;color:var(--tx);text-decoration:none;background:var(--card)}
+.rA{background:#ff3b0a}.rB{background:#ffff00}.rC{background:#1fb4f0}
+.fd td.rA .ck,.fd td.rB .ck,.fd td.rC .ck{color:#000}
+.leg{display:flex;gap:28px;flex-wrap:wrap;align-items:flex-start;margin-top:22px}.leg>div{max-width:100%;overflow-x:auto}
+.lt{font-weight:700;font-size:13px;margin-bottom:6px}
+table.lg{min-width:0;width:auto;border:1px solid var(--tx)}.lg td{border:1px solid var(--line);padding:5px 12px;white-space:nowrap;vertical-align:middle}
+.lg td.k{text-align:center;width:34px}.lg td.rr{font-weight:700;text-align:center;color:#000;min-width:96px}
+@media (max-width:820px){aside{position:fixed;z-index:5;left:-270px;transition:left .2s;padding-top:calc(18px + env(safe-area-inset-top,0px))}aside.open{left:0}#burger{display:block}main{padding:16px}.info{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<aside id="side"></aside>
+<main>
+  <div class="top"><button id="burger" onclick="side.classList.toggle('open')">☰</button><div><div class="crumb" id="crumb"></div><h1 id="title"></h1></div></div>
+  <div id="view"></div>
+</main>
+<dialog id="dlg"><form method="dialog" onsubmit="return false"><h3 id="dt" style="margin:0 0 4px"></h3><div id="fields"></div><div class="act"><button type="button" onclick="dlg.close()">Batal</button><button type="button" class="p" onclick="save()">Simpan</button></div></form></dialog>
+<script>
+const S=['Aktif','Akan Habis','Expired'],K=['Baik','Perlu Perbaikan','Rusak'];
+const P={
+perijinan:{g:'Legal',t:'Perijinan',c:[['Nama Perijinan'],['No. Dokumen'],['Tgl Terbit','date'],['Masa Berlaku','date'],['Status','sel',S]],d:[['IMB / PBG Gedung A','PBG-0123/2023','2023-03-10','2033-03-10','Aktif'],['Izin Lingkungan (UKL-UPL)','UKL-221/2022','2022-06-01','2026-12-01','Akan Habis'],['Sertifikat Laik Fungsi','SLF-045/2021','2021-01-15','2026-01-15','Expired']]},
+sop:{g:'Legal',t:'SOP',c:[['Judul SOP'],['No. SOP'],['Revisi'],['Tgl Berlaku','date'],['Status','sel',['Berlaku','Review','Kadaluarsa']]],d:[['SOP Tanggap Darurat Kebakaran','SOP-HSE-001','Rev 02','2025-02-01','Berlaku'],['SOP Pemeliharaan Bangunan','SOP-ENG-007','Rev 01','2024-08-20','Review']]},
+sio:{g:'Legal',t:'SIO',c:[['Nama Operator'],['Jenis SIO'],['No. SIO'],['Masa Berlaku','date'],['Status','sel',S]],d:[['Budi Santoso','Operator Forklift','SIO-F-8891','2027-04-30','Aktif'],['Andi Wijaya','Operator Crane','SIO-C-1120','2026-11-10','Akan Habis']]},
+mou:{g:'Legal',t:'MoU / Kerjasama',c:[['Pihak Kerjasama'],['Ruang Lingkup'],['No. MoU'],['Berakhir','date'],['Status','sel',S]],d:[['PT Sinar Teknik','Maintenance Gedung','MoU-2024/012','2027-01-31','Aktif'],['Dinas Pemadam Kebakaran','Pelatihan & Inspeksi','MoU-2023/044','2026-10-31','Akan Habis']]},
+apar:{g:'Safety',t:'Checksheet APAR',c:[['Kode APAR'],['Lokasi'],['Jenis / Kapasitas'],['Tgl Cek','date'],['Petugas'],['Kondisi','sel',['Baik','Perlu Perbaikan','Expired']]],d:[['APAR-001','Lobby Lt.1','Powder 6 kg','2026-10-01','Rina','Baik'],['APAR-002','Gudang B','CO2 5 kg','2026-10-01','Rina','Perlu Perbaikan']]},
+hydrant:{g:'Safety',t:'Checksheet Hydrant',c:[['Kode Hydrant'],['Lokasi'],['Tekanan (bar)'],['Tgl Cek','date'],['Petugas'],['Kondisi','sel',K]],d:[['HYD-01','Halaman Depan','7.5','2026-10-02','Dedi','Baik'],['HYD-02','Area Parkir','5.0','2026-10-02','Dedi','Perlu Perbaikan']]},
+pic:{g:'Safety',parent:1,t:'PIC',c:[['Nama PIC'],['Area Tanggung Jawab'],['No. HP'],['Status','sel',['Aktif','Nonaktif']]],d:[['Agus','Workshop','0812-0000-0001','Aktif'],['Siti','Gudang A','0812-0000-0002','Aktif'],['Rudi','Area Parkir','0812-0000-0003','Aktif']]},
+bangunan:{g:'Building',t:'Status Bangunan',c:[['Nama Bangunan'],['Lokasi'],['Luas (m²)'],['Jml Lantai'],['Pemeliharaan Terakhir','date'],['Kondisi','sel',['Baik','Perlu Perawatan','Rusak']]],d:[['Gedung Kantor A','Blok 1','2400','3','2026-08-12','Baik'],['Gudang B','Blok 3','1800','1','2026-05-20','Perlu Perawatan']]},
+jo:{g:'Building',t:'JO (Job Order)',c:[['No. JO'],['Bangunan'],['Uraian Pekerjaan'],['Tgl','date'],['PIC'],['Status','sel',['Open','Progress','Selesai']]],d:[['JO-2610-001','Gudang B','Perbaikan atap bocor','2026-10-03','Joko','Progress'],['JO-2610-002','Gedung A','Pengecatan lobby','2026-10-08','Eko','Open']]}
+};
+const ALL={...P,leader:{g:'Safety',parent:1,t:'Leader'}};
+const GRP=['Legal','Safety','Building'],ICON={Legal:'⚖️',Safety:'🧯',Building:'🏢'};
+const TEAMS=[1,2,3,4,5],STOP=['A','B','C','D','E','F','O'],KAT=['Ringkas','Rapi','Resik'],RISK=['A','B','C'];
+const ZD={1:['Agus, Siti, Rudi','Zona 1 - Workshop'],2:['Dedi, Rina, Joko','Zona 2 - Gudang'],3:['Eko, Maya, Budi','Zona 3 - Gedung Kantor'],4:['Andi, Wawan, Lina','Zona 4 - Area Parkir & Utilitas'],5:['Hendra, Tono, Nia','Zona 5 - Area Produksi']};
+const today=new Date().toLocaleDateString('sv-SE');
+let D={},cur='home',q='',lt='1',ld=today,subOpen=false,onSave=null;
+try{D=JSON.parse(localStorage.getItem('masterinfra_v2')||'{}')||{}}catch(e){D={}}
+for(const k in P)if(!D[k])D[k]=P[k].d.map(r=>[...r]);
+if(!D.team){D.team={};TEAMS.forEach(t=>D.team[t]={member:ZD[t][0],zona:ZD[t][1]})}
+if(!D.info)D.info={};
+const sv=()=>{try{localStorage.setItem('masterinfra_v2',JSON.stringify(D))}catch(e){}};
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const cls=v=>v==='Nonaktif'?'neu':['Aktif','Berlaku','Baik','Closed','Selesai'].includes(v)?'good':['Akan Habis','Review','Perlu Perbaikan','Perlu Perawatan','Progress'].includes(v)?'warn':['Expired','Kadaluarsa','Rusak','Open'].includes(v)?'bad':'';
+const fmt=d=>d?new Date(d+'T00:00:00').toLocaleDateString('id-ID',{weekday:'long',day:'numeric',month:'long',year:'numeric'}):'-';
+
+const SHEET_ID='10yxuxmay6aQ8Gx01videkRj0roRK6iNHfPtZgRtUvfg',SHEET_TAB='Form Responses 1';
+const SHEET_URL='https://docs.google.com/spreadsheets/d/'+SHEET_ID+'/edit?usp=sharing';
+let SH=null,shState='idle',shErr='',firstLoad=true;
+function isoDate(c){if(!c||c.v==null)return '';const v=c.v;if(typeof v!=='string')return '';
+  let m=v.match(/^Date\((\d+),(\d+),(\d+)/);if(m)return `${m[1]}-${String(+m[2]+1).padStart(2,'0')}-${m[3].padStart(2,'0')}`;
+  m=v.match(/^(\d{4})-(\d{2})-(\d{2})/);if(m)return m[0];
+  m=v.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);if(m)return `${m[3]}-${m[1].padStart(2,'0')}-${m[2].padStart(2,'0')}`; // format M/D/YYYY
+  return ''}
+function parseSheet(t){
+  const L=t.cols.map(c=>(c.label||'').trim().toLowerCase());
+  const f=(fn,d)=>{const i=L.findIndex(fn);return i>=0?i:d};
+  const I={tgl:f(l=>l.includes('tanggal'),1),tim:f(l=>l==='tim',2),area:f(l=>l==='area',3),des:f(l=>l.includes('deskripsi'),4),foto:f(l=>l.includes('foto'),5),kat:f(l=>l.includes('kategori'),6),stop:f(l=>l.includes('stop'),7),risk:f(l=>l.includes('risk'),8),saran:f(l=>l.includes('saran'),9)};
+  const tx=(row,i)=>{const c=row.c[i];return c&&c.v!=null?String(c.v).trim():''};
+  return t.rows.map(row=>{
+    const tim=tx(row,I.tim),foto=tx(row,I.foto),ids=[];
+    foto.replace(/(?:[?&]id=|\/d\/)([\w-]+)/g,(_,x)=>ids.push(x));
+    const sm=tx(row,I.stop).match(/^([A-Fa-f]|[Oo])(?![A-Za-z])/),rm=tx(row,I.risk).match(/^([ABCabc])(?![A-Za-z])/);
+    return {d:isoDate(row.c[I.tgl]),tim,n:(tim.match(/\d+/)||[null])[0],area:tx(row,I.area),temuan:tx(row,I.des),fotos:ids,
+      kat:tx(row,I.kat).toLowerCase().split(',').map(x=>x.trim()),stop:sm?sm[1].toUpperCase():'',risk:rm?rm[1].toUpperCase():'',saran:tx(row,I.saran)}
+  }).filter(x=>x.area||x.temuan||x.fotos.length);
+}
+function loadSheet(){
+  shState='loading';if(cur==='leader')render();
+  new Promise((res,rej)=>{
+    const t=setTimeout(()=>rej(new Error('Waktu habis. Pastikan spreadsheet dibagikan dengan akses "Siapa saja yang memiliki link" (Viewer).')),15000);
+    window.google=window.google||{};google.visualization=google.visualization||{};
+    google.visualization.Query={setResponse:x=>{clearTimeout(t);res(x)}};
+    const sc=document.createElement('script');
+    sc.src='https://docs.google.com/spreadsheets/d/'+SHEET_ID+'/gviz/tq?tqx=out:json&headers=1&sheet='+encodeURIComponent(SHEET_TAB)+'&_='+Date.now();
+    sc.onerror=()=>{clearTimeout(t);rej(new Error('Gagal terhubung ke Google Sheets. Periksa koneksi internet.'))};
+    document.head.appendChild(sc);
+  }).then(x=>{
+    if(x.status!=='ok')throw new Error((x.errors&&x.errors[0]&&x.errors[0].detailed_message)||'Respons Google Sheets tidak valid.');
+    SH=parseSheet(x.table);shState='ok';
+    if(firstLoad&&SH.length&&!SH.some(q=>q.d===ld)){const ds=SH.map(q=>q.d).filter(Boolean).sort();if(ds.length)ld=ds[ds.length-1]}
+    firstLoad=false;
+  }).catch(e=>{shState='err';shErr=e.message}).finally(()=>{if(cur==='leader'||cur==='home')render()});
+}
+function nav(){
+  const a=(k,t)=>`<a class="${k===cur?'on':''}" onclick="go('${k}')">${t}</a>`;
+  let h='<div class="logo">🏗️<div>Master Infra<small>Manajemen Infrastruktur</small></div></div>'+a('home','🏠 Dashboard');
+  for(const g of GRP){
+    h+=`<div class="grp">${ICON[g]} ${g}</div>`;
+    for(const k in P)if(P[k].g===g&&!P[k].parent)h+=a(k,P[k].t);
+    if(g==='Safety'){
+      h+=`<a onclick="subOpen=!subOpen;nav()">Safety Patrol<span class="car">${subOpen?'▾':'▸'}</span></a>`;
+      if(subOpen)h+=`<div class="sub">${a('pic','PIC')}${a('leader','Leader')}</div>`;
+    }
+  }
+  side.innerHTML=h;
+}
+function go(k){cur=k;q='';if(k==='pic'||k==='leader')subOpen=true;location.hash=k;side.classList.remove('open');nav();render()}
+
+function render(){
+  if(cur==='home'){title.textContent='Dashboard';crumb.textContent='Master Infra';
+    let h='';
+    for(const g of GRP){h+=`<h3>${ICON[g]} ${g}</h3><div class="cards" style="margin-bottom:20px">`;
+      for(const k in ALL)if(ALL[k].g===g){
+        const isL=k==='leader',n=isL?(SH?SH.length:'…'):D[k].length,al=isL?(SH?SH.filter(r=>r.risk==='A').length:0):D[k].filter(r=>cls(r[r.length-1])==='bad').length;
+        h+=`<div class="card k" onclick="go('${k}')"><div class="n">${n}</div><div class="l">${isL?'Temuan Safety Patrol (Leader)':ALL[k].t}</div><div class="l" style="color:var(--r);margin-top:4px">${al?al+(isL?' risiko rank A':' perlu perhatian'):'&nbsp;'}</div></div>`}
+      h+='</div>'}
+    view.innerHTML=h;return}
+  const p=ALL[cur];title.textContent=cur==='leader'?'Leader - Safety Patrol':p.t;
+  crumb.textContent='Master Infra › '+p.g+(p.parent?' › Safety Patrol':'');
+  if(cur==='leader')return renderLeader();
+  const rows=D[cur].map((r,i)=>[r,i]).filter(([r])=>r.join(' ').toLowerCase().includes(q.toLowerCase()));
+  let h=`<div class="tools"><input class="s" placeholder="Cari..." value="${esc(q)}" oninput="q=this.value;rs(this)"><button class="p" onclick="openF(-1)">+ Tambah</button></div><div class="wrap"><table><thead><tr>`;
+  p.c.forEach(c=>h+=`<th>${c[0]}</th>`);h+='<th></th></tr></thead><tbody>';
+  rows.forEach(([r,i])=>{h+='<tr>';r.forEach((v,j)=>{h+=p.c[j][1]==='sel'?`<td><span class="b ${cls(v)}">${esc(v)}</span></td>`:`<td>${esc(v)}</td>`});h+=`<td><button class="sm" onclick="openF(${i})">Edit</button> <button class="sm" onclick="del(${i})">Hapus</button></td></tr>`});
+  h+='</tbody></table>'+(rows.length?'':'<div class="empty">Belum ada data</div>')+'</div>';
+  view.innerHTML=h;
+}
+function rs(el){const pos=el.selectionStart;render();const i=view.querySelector('input');i.focus();i.setSelectionRange(pos,pos)}
+
+const LEG=`<div class="leg"><div><div class="lt">KATEGORI STOP 6</div><table class="lg">${[['A','APPARATUS','Terjepit mesin'],['B','BIG HEAVY','Kejatuhan benda berat'],['C','CAR','Tertabrak kendaraan'],['D','DROP','Terjatuh dari ketinggian'],['E','ELECTRICAL','Tersengat listrik atau akibat listrik'],['F','FIRE','Terkena panas atau kebakaran'],['O','OTHERS','Potensi bahaya diluar kategori diatas']].map(x=>`<tr><td class="k">${x[0]}</td><td>: ${x[1]} (${x[2]})</td></tr>`).join('')}</table></div>
+<div><div class="lt">RISK RANK</div><table class="lg">${[['A',['Kematian','Kehilangan anggota tubuh','Kehilangan fungsi tubuh']],['B',['Cidera','Produksi terhenti','Kehilangan hari kerja']],['C',['Cidera ringan','Produksi tidak terhenti','Tidak ada kehilangan hari kerja']]].map(x=>`<tr><td class="rr r${x[0]}">RANK ${x[0]}</td><td>${x[1].map(i=>'- '+i).join('<br>')}</td></tr>`).join('')}</table></div></div>`;
+function fotoHtml(r){return r.fotos.length?r.fotos.map(id=>`<a href="https://drive.google.com/open?id=${id}" target="_blank" rel="noopener"><img class="ph" src="https://drive.google.com/thumbnail?id=${id}&sz=w300" loading="lazy" referrerpolicy="no-referrer" alt="Foto temuan" onerror="this.outerHTML='📷 Buka foto'"></a>`).join(''):'-'}
+function renderLeader(){
+  const inf=D.info[lt+'|'+ld]||D.team[lt];
+  let h=`<div class="tools"><div style="min-width:160px"><label class="lb">Team</label><select onchange="lt=this.value;render()">${TEAMS.map(t=>`<option value="${t}"${String(t)===lt?' selected':''}>Tim ${t}</option>`).join('')}</select></div>
+  <div style="min-width:190px"><label class="lb">Tanggal Pemantauan</label><input type="date" value="${esc(ld)}" onchange="ld=this.value;render()"></div></div>`;
+  if(!ld){view.innerHTML=h+'<div class="card empty">Pilih tanggal pemantauan terlebih dahulu.</div>';return}
+  const chips=inf.member.split(',').map(x=>x.trim()).filter(Boolean).map(m=>`<span class="b neu chip">${esc(m)}</span>`).join('')||'-';
+  h+=`<div class="card info"><div><div class="l">Tanggal Pemantauan</div><b>${fmt(ld)}</b></div><div><div class="l">Member</div>${chips}</div><div><div class="l">Zona</div><b>${esc(inf.zona||'-')}</b></div><button class="sm" onclick="editInfo()">Edit</button></div>`;
+  h+=`<div class="sec"><h3>Temuan - Tim ${lt}</h3><div><button class="sm" onclick="loadSheet()">↻ Muat ulang</button> <a class="btnl" href="${SHEET_URL}" target="_blank" rel="noopener">Buka Spreadsheet</a></div></div>`;
+  if(shState==='idle'||shState==='loading'){view.innerHTML=h+'<div class="card empty">Memuat data dari Google Sheets…</div>';return}
+  if(shState==='err'){view.innerHTML=h+`<div class="card empty" style="color:var(--r)">${esc(shErr)}</div>`;return}
+  const rows=SH.filter(x=>x.d===ld&&x.n===lt),mk=(on,c='')=>`<td class="c ${on?c:''}">${on?'<span class="ck">✓</span>':''}</td>`;
+  h+=`<div class="wrap"><table class="fd"><thead>
+  <tr><th rowspan="2">NO</th><th rowspan="2">AREA</th><th rowspan="2">TEMUAN</th><th rowspan="2">FOTO TEMUAN</th><th colspan="3">KATEGORI</th><th colspan="7">STOP 6</th><th colspan="3">RISK RANK</th><th rowspan="2">SARAN TINDAKAN PERBAIKAN</th></tr>
+  <tr>${KAT.map(k=>`<th>${k.toUpperCase()}</th>`).join('')}${STOP.map(k=>`<th>${k}</th>`).join('')}${RISK.map(k=>`<th>${k}</th>`).join('')}</tr></thead><tbody>`;
+  rows.forEach((x,n)=>{h+=`<tr><td class="c">${n+1}</td><td class="t">${esc(x.area)}</td><td class="t">${esc(x.temuan)}</td><td class="c">${fotoHtml(x)}</td>`
+    +KAT.map(k=>mk(x.kat.includes(k.toLowerCase()))).join('')+STOP.map(k=>mk(x.stop===k)).join('')+RISK.map(k=>mk(x.risk===k,'r'+k)).join('')
+    +`<td class="t">${esc(x.saran)}</td></tr>`});
+  if(!rows.length)h+=`<tr><td colspan="18" class="empty">Belum ada temuan untuk Tim ${lt} pada tanggal ini</td></tr>`;
+  h+='</tbody></table></div>';
+  const oth=SH.filter(x=>x.d===ld&&x.n!==lt);
+  if(!rows.length&&oth.length)h+=`<div class="l" style="margin-top:8px">Ada ${oth.length} temuan pada tanggal ini dengan isian Tim: ${[...new Set(oth.map(x=>x.tim||'(kosong)'))].map(esc).join(', ')}.</div>`;
+  view.innerHTML=h+LEG;
+}
+function dlgOpen(ttl,cols,vals,cb){onSave=cb;dt.textContent=ttl;
+  fields.innerHTML=cols.map((c,j)=>{const v=vals[j]??'';return `<label>${c[0]}</label>`+(c[1]==='sel'?`<select>${c[2].map(o=>`<option${o===v?' selected':''}>${esc(o)}</option>`).join('')}</select>`:`<input type="${c[1]||'text'}" value="${esc(v)}">`)}).join('');
+  dlg.showModal()}
+function save(){const v=[...fields.querySelectorAll('input,select')].map(e=>e.value.trim());if(!v[0]){fields.querySelector('input').focus();return}
+  onSave(v);sv();dlg.close();render()}
+function openF(i){dlgOpen((i>=0?'Edit ':'Tambah ')+P[cur].t,P[cur].c,i>=0?D[cur][i]:[],v=>{i>=0?D[cur][i]=v:D[cur].push(v)})}
+function del(i){if(confirm('Hapus data ini?')){D[cur].splice(i,1);sv();render()}}
+function editInfo(){const inf=D.info[lt+'|'+ld]||D.team[lt];
+  dlgOpen('Member & Zona - Tim '+lt,[['Member (pisahkan dengan koma)'],['Zona']],[inf.member,inf.zona],v=>{D.info[lt+'|'+ld]={member:v[0],zona:v[1]}})}
+
+const h0=location.hash.slice(1);
+if(ALL[h0]){cur=h0;subOpen=!!ALL[h0].parent}
+nav();render();loadSheet();
+</script>
+</body>
+</html>
