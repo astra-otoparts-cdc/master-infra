@@ -40,12 +40,12 @@ table{border-collapse:collapse;width:100%;min-width:640px}
 th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);white-space:nowrap}
 th{font-size:12px;color:var(--mut);text-transform:uppercase;letter-spacing:.04em;background:var(--bg)}
 tr:last-child td{border-bottom:0}
-.fd{min-width:1150px}
+.fd{min-width:1380px}.fd td.f{min-width:250px}.ac{display:flex;flex-direction:column;gap:6px}
 .fd th,.fd td{border:1px solid var(--line);padding:8px}
 .fd th{text-align:center;vertical-align:middle;color:var(--tx)}
 .fd td.c{text-align:center}.fd td.t{white-space:normal;min-width:170px}
 .ck{font-weight:700;color:var(--g)}.rkA{color:var(--r)}.rkB{color:var(--w)}
-.info{display:grid;grid-template-columns:1fr 1.6fr 1.2fr auto;gap:16px;align-items:start;margin-bottom:16px}
+.info{display:grid;grid-template-columns:1fr 1.6fr 1.2fr;gap:16px;align-items:start;margin-bottom:16px}
 .info b{font-size:15px}.chip{margin:2px 2px 0 0;display:inline-block}
 .sec{display:flex;align-items:center;justify-content:space-between;margin:6px 0 10px}.sec h3{margin:0}
 .b{padding:3px 9px;border-radius:99px;font-size:12px;font-weight:600}
@@ -55,7 +55,7 @@ dialog{border:1px solid var(--line);border-radius:14px;background:var(--card);co
 dialog::backdrop{background:rgba(0,0,0,.5)}
 dialog label{display:block;font-size:12px;color:var(--mut);margin:10px 0 4px}
 .act{display:flex;justify-content:flex-end;gap:8px;margin-top:18px}
-.ph{width:110px;height:80px;object-fit:cover;border-radius:6px;display:block;margin:0 auto}
+.ph{width:230px;height:170px;object-fit:cover;border-radius:6px;display:block;margin:0 auto 6px;cursor:zoom-in;background:var(--bg)}
 .btnl{display:inline-block;padding:4px 9px;font-size:12px;border:1px solid var(--line);border-radius:8px;color:var(--tx);text-decoration:none;background:var(--card)}
 .rA{background:#ff3b0a}.rB{background:#ffff00}.rC{background:#1fb4f0}
 .fd td.rA .ck,.fd td.rB .ck,.fd td.rC .ck{color:#000}
@@ -63,6 +63,12 @@ dialog label{display:block;font-size:12px;color:var(--mut);margin:10px 0 4px}
 .lt{font-weight:700;font-size:13px;margin-bottom:6px}
 table.lg{min-width:0;width:auto;border:1px solid var(--tx)}.lg td{border:1px solid var(--line);padding:5px 12px;white-space:nowrap;vertical-align:middle}
 .lg td.k{text-align:center;width:34px}.lg td.rr{font-weight:700;text-align:center;color:#000;min-width:96px}
+#lb{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.93);display:flex;flex-direction:column;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}#lb[hidden]{display:none}
+.lbt{display:flex;gap:12px;align-items:center;padding:10px 14px;color:#fff;flex-wrap:wrap}.lbt .hint{margin-left:auto;font-size:12px;color:#c3cad6}
+.lbm{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;min-height:0;padding:0 8px 10px}
+#lba{display:flex;min-width:0}#lbi{max-width:92vw;max-height:calc(100vh - 90px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));object-fit:contain;display:block;cursor:pointer;border-radius:4px}
+.nv{background:rgba(255,255,255,.15);color:#fff;border:0;font-size:28px;padding:10px 14px}.nv[hidden]{display:none}
+dialog .ci{display:inline-flex;align-items:center;gap:6px;margin:0 14px 0 0;color:var(--tx);font-size:14px}.ci input{width:auto}.chk{padding:4px 0}
 @media (max-width:820px){aside{position:fixed;z-index:5;left:-270px;transition:left .2s;padding-top:calc(18px + env(safe-area-inset-top,0px))}aside.open{left:0}#burger{display:block}main{padding:16px}.info{grid-template-columns:1fr}}
 </style>
 </head>
@@ -73,6 +79,7 @@ table.lg{min-width:0;width:auto;border:1px solid var(--tx)}.lg td{border:1px sol
   <div id="view"></div>
 </main>
 <dialog id="dlg"><form method="dialog" onsubmit="return false"><h3 id="dt" style="margin:0 0 4px"></h3><div id="fields"></div><div class="act"><button type="button" onclick="dlg.close()">Batal</button><button type="button" class="p" onclick="save()">Simpan</button></div></form></dialog>
+<div id="lb" hidden><div class="lbt"><button onclick="closeLB()">← Kembali ke tabel</button><b id="lbc"></b><span class="hint">Klik foto untuk membuka file di Google Drive</span></div><div class="lbm"><button id="lbp" class="nv" onclick="stepLB(-1)">‹</button><a id="lba" target="_blank" rel="noopener"><img id="lbi" alt="Foto temuan" referrerpolicy="no-referrer"></a><button id="lbn" class="nv" onclick="stepLB(1)">›</button></div></div>
 <script>
 const S=['Aktif','Akan Habis','Expired'],K=['Baik','Perlu Perbaikan','Rusak'];
 const P={
@@ -94,8 +101,9 @@ const today=new Date().toLocaleDateString('sv-SE');
 let D={},cur='home',q='',lt='1',ld=today,subOpen=false,onSave=null;
 try{D=JSON.parse(localStorage.getItem('masterinfra_v2')||'{}')||{}}catch(e){D={}}
 for(const k in P)if(!D[k])D[k]=P[k].d.map(r=>[...r]);
-if(!D.team){D.team={};TEAMS.forEach(t=>D.team[t]={member:ZD[t][0],zona:ZD[t][1]})}
-if(!D.info)D.info={};
+if(!D.team){D.team={};TEAMS.forEach(t=>D.team[t]={member:ZD[t][0],zona:''})}
+if(!D.info)D.info={};if(!D.ov)D.ov={};if(!D.del)D.del={};
+TEAMS.forEach(t=>{if(/^Zona \d/.test(D.team[t].zona))D.team[t].zona=''});for(const k in D.info)if(/^Zona \d/.test(D.info[k].zona))D.info[k].zona='';
 const sv=()=>{try{localStorage.setItem('masterinfra_v2',JSON.stringify(D))}catch(e){}};
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const cls=v=>v==='Nonaktif'?'neu':['Aktif','Berlaku','Baik','Closed','Selesai'].includes(v)?'good':['Akan Habis','Review','Perlu Perbaikan','Perlu Perawatan','Progress'].includes(v)?'warn':['Expired','Kadaluarsa','Rusak','Open'].includes(v)?'bad':'';
@@ -114,25 +122,32 @@ function parseSheet(t){
   const f=(fn,d)=>{const i=L.findIndex(fn);return i>=0?i:d};
   const I={tgl:f(l=>l.includes('tanggal'),1),tim:f(l=>l==='tim',2),area:f(l=>l==='area',3),des:f(l=>l.includes('deskripsi'),4),foto:f(l=>l.includes('foto'),5),kat:f(l=>l.includes('kategori'),6),stop:f(l=>l.includes('stop'),7),risk:f(l=>l.includes('risk'),8),saran:f(l=>l.includes('saran'),9)};
   const tx=(row,i)=>{const c=row.c[i];return c&&c.v!=null?String(c.v).trim():''};
-  return t.rows.map(row=>{
-    const tim=tx(row,I.tim),foto=tx(row,I.foto),ids=[];
+  return t.rows.map((row,idx)=>{
+    const tim=tx(row,I.tim),foto=tx(row,I.foto),ids=[],c0=row.c[0],ts=c0?String(c0.f||c0.v||''):'';
     foto.replace(/(?:[?&]id=|\/d\/)([\w-]+)/g,(_,x)=>ids.push(x));
     const sm=tx(row,I.stop).match(/^([A-Fa-f]|[Oo])(?![A-Za-z])/),rm=tx(row,I.risk).match(/^([ABCabc])(?![A-Za-z])/);
-    return {d:isoDate(row.c[I.tgl]),tim,n:(tim.match(/\d+/)||[null])[0],area:tx(row,I.area),temuan:tx(row,I.des),fotos:ids,
+    return {key:ts||('r'+idx),d:isoDate(row.c[I.tgl]),tim,n:(tim.match(/\d+/)||[null])[0],area:tx(row,I.area),temuan:tx(row,I.des),fotos:ids,
       kat:tx(row,I.kat).toLowerCase().split(',').map(x=>x.trim()),stop:sm?sm[1].toUpperCase():'',risk:rm?rm[1].toUpperCase():'',saran:tx(row,I.saran)}
   }).filter(x=>x.area||x.temuan||x.fotos.length);
 }
+const ZONE_ID='1o78OL1bF9GYRBnFaPpkM9K_SWICNcZE_7MQMygGgAzU';
+let ZONES=['CDC Plant 1','CDC Plant 2','RDC Semarang','RDC Sidoarjo','RDC Bandung','DC Serang','DC Purwokerto','DC Jember','DC Denpasar','DC Manado','DC Makassar','DC Bonjer'];
+let gq=Promise.resolve();
+function gviz(id,qs){const run=()=>new Promise((res,rej)=>{
+  const t=setTimeout(()=>rej(new Error('Waktu habis. Pastikan spreadsheet dibagikan dengan akses "Siapa saja yang memiliki link" (Viewer).')),15000);
+  window.google=window.google||{};google.visualization=google.visualization||{};
+  google.visualization.Query={setResponse:x=>{clearTimeout(t);res(x)}};
+  const sc=document.createElement('script');
+  sc.src='https://docs.google.com/spreadsheets/d/'+id+'/gviz/tq?tqx=out:json&'+qs+'&_='+Date.now();
+  sc.onerror=()=>{clearTimeout(t);rej(new Error('Gagal terhubung ke Google Sheets. Periksa koneksi internet.'))};
+  document.head.appendChild(sc)});
+  const p=gq.then(run,run);gq=p.catch(()=>{});return p}
+function loadZones(){gviz(ZONE_ID,'headers=0').then(x=>{if(x.status!=='ok')return;
+  const z=x.table.rows.map(w=>w.c[0]&&w.c[0].v!=null?String(w.c[0].v).trim():'').filter(Boolean);
+  if(z.length){ZONES=z;if(cur==='leader')render()}}).catch(()=>{})}
 function loadSheet(){
   shState='loading';if(cur==='leader')render();
-  new Promise((res,rej)=>{
-    const t=setTimeout(()=>rej(new Error('Waktu habis. Pastikan spreadsheet dibagikan dengan akses "Siapa saja yang memiliki link" (Viewer).')),15000);
-    window.google=window.google||{};google.visualization=google.visualization||{};
-    google.visualization.Query={setResponse:x=>{clearTimeout(t);res(x)}};
-    const sc=document.createElement('script');
-    sc.src='https://docs.google.com/spreadsheets/d/'+SHEET_ID+'/gviz/tq?tqx=out:json&headers=1&sheet='+encodeURIComponent(SHEET_TAB)+'&_='+Date.now();
-    sc.onerror=()=>{clearTimeout(t);rej(new Error('Gagal terhubung ke Google Sheets. Periksa koneksi internet.'))};
-    document.head.appendChild(sc);
-  }).then(x=>{
+  gviz(SHEET_ID,'headers=1&sheet='+encodeURIComponent(SHEET_TAB)).then(x=>{
     if(x.status!=='ok')throw new Error((x.errors&&x.errors[0]&&x.errors[0].detailed_message)||'Respons Google Sheets tidak valid.');
     SH=parseSheet(x.table);shState='ok';
     if(firstLoad&&SH.length&&!SH.some(q=>q.d===ld)){const ds=SH.map(q=>q.d).filter(Boolean).sort();if(ds.length)ld=ds[ds.length-1]}
@@ -159,7 +174,7 @@ function render(){
     let h='';
     for(const g of GRP){h+=`<h3>${ICON[g]} ${g}</h3><div class="cards" style="margin-bottom:20px">`;
       for(const k in ALL)if(ALL[k].g===g){
-        const isL=k==='leader',n=isL?(SH?SH.length:'…'):D[k].length,al=isL?(SH?SH.filter(r=>r.risk==='A').length:0):D[k].filter(r=>cls(r[r.length-1])==='bad').length;
+        const isL=k==='leader',n=isL?(SH?rowsAll().length:'…'):D[k].length,al=isL?(SH?rowsAll().filter(r=>r.risk==='A').length:0):D[k].filter(r=>cls(r[r.length-1])==='bad').length;
         h+=`<div class="card k" onclick="go('${k}')"><div class="n">${n}</div><div class="l">${isL?'Temuan Safety Patrol (Leader)':ALL[k].t}</div><div class="l" style="color:var(--r);margin-top:4px">${al?al+(isL?' risiko rank A':' perlu perhatian'):'&nbsp;'}</div></div>`}
       h+='</div>'}
     view.innerHTML=h;return}
@@ -177,43 +192,70 @@ function rs(el){const pos=el.selectionStart;render();const i=view.querySelector(
 
 const LEG=`<div class="leg"><div><div class="lt">KATEGORI STOP 6</div><table class="lg">${[['A','APPARATUS','Terjepit mesin'],['B','BIG HEAVY','Kejatuhan benda berat'],['C','CAR','Tertabrak kendaraan'],['D','DROP','Terjatuh dari ketinggian'],['E','ELECTRICAL','Tersengat listrik atau akibat listrik'],['F','FIRE','Terkena panas atau kebakaran'],['O','OTHERS','Potensi bahaya diluar kategori diatas']].map(x=>`<tr><td class="k">${x[0]}</td><td>: ${x[1]} (${x[2]})</td></tr>`).join('')}</table></div>
 <div><div class="lt">RISK RANK</div><table class="lg">${[['A',['Kematian','Kehilangan anggota tubuh','Kehilangan fungsi tubuh']],['B',['Cidera','Produksi terhenti','Kehilangan hari kerja']],['C',['Cidera ringan','Produksi tidak terhenti','Tidak ada kehilangan hari kerja']]].map(x=>`<tr><td class="rr r${x[0]}">RANK ${x[0]}</td><td>${x[1].map(i=>'- '+i).join('<br>')}</td></tr>`).join('')}</table></div></div>`;
-function fotoHtml(r){return r.fotos.length?r.fotos.map(id=>`<a href="https://drive.google.com/open?id=${id}" target="_blank" rel="noopener"><img class="ph" src="https://drive.google.com/thumbnail?id=${id}&sz=w300" loading="lazy" referrerpolicy="no-referrer" alt="Foto temuan" onerror="this.outerHTML='📷 Buka foto'"></a>`).join(''):'-'}
+function rowsAll(){return SH.filter(x=>!D.del[x.key]).map(x=>D.ov[x.key]?{...x,...D.ov[x.key]}:x)}
+let VR=[],LB=null;
+function fotoHtml(x,ri){return x.fotos.length?x.fotos.map((id,j)=>`<a href="https://drive.google.com/open?id=${id}" onclick="openLB(${ri},${j});return false"><img class="ph" src="https://lh3.googleusercontent.com/d/${id}=w600" loading="lazy" referrerpolicy="no-referrer" alt="Foto temuan" onerror="if(!this.dataset.f){this.dataset.f=1;this.src='https://drive.google.com/thumbnail?id=${id}&sz=w600'}else{this.outerHTML='📷 Buka foto'}"></a>`).join(''):'-'}
+function openLB(ri,i){if(!VR[ri]||!VR[ri].fotos.length)return;LB={ri,i};showLB();try{history.pushState({lb:1},'')}catch(e){}}
+function showLB(){const x=VR[LB.ri],id=x.fotos[LB.i];lb.hidden=false;document.body.style.overflow='hidden';
+  lbi.dataset.f='';lbi.onerror=()=>{if(!lbi.dataset.f){lbi.dataset.f=1;lbi.src='https://drive.google.com/thumbnail?id='+id+'&sz=w1600'}};
+  lbi.src='https://lh3.googleusercontent.com/d/'+id+'=w1600';lba.href='https://drive.google.com/open?id='+id;
+  lbc.textContent=(x.area||'Foto temuan')+(x.fotos.length>1?` · ${LB.i+1}/${x.fotos.length}`:'');lbp.hidden=lbn.hidden=x.fotos.length<2}
+function stepLB(d){const n=VR[LB.ri].fotos.length;LB.i=(LB.i+d+n)%n;showLB()}
+function closeLB(pop){if(lb.hidden)return;lb.hidden=true;lbi.onerror=null;lbi.removeAttribute('src');document.body.style.overflow='';LB=null;
+  if(!pop&&history.state&&history.state.lb){try{history.back()}catch(e){}}}
+lb.addEventListener('click',e=>{if(e.target===lb||e.target.classList.contains('lbm'))closeLB()});
+addEventListener('popstate',()=>closeLB(true));
+addEventListener('keydown',e=>{if(lb.hidden)return;if(e.key==='Escape')closeLB();if(e.key==='ArrowRight'&&VR[LB.ri].fotos.length>1)stepLB(1);if(e.key==='ArrowLeft'&&VR[LB.ri].fotos.length>1)stepLB(-1)});
+function setZona(v){const k=lt+'|'+ld,inf=D.info[k]||D.team[lt];D.info[k]={...inf,zona:v};sv();render()}
 function renderLeader(){
   const inf=D.info[lt+'|'+ld]||D.team[lt];
   let h=`<div class="tools"><div style="min-width:160px"><label class="lb">Team</label><select onchange="lt=this.value;render()">${TEAMS.map(t=>`<option value="${t}"${String(t)===lt?' selected':''}>Tim ${t}</option>`).join('')}</select></div>
   <div style="min-width:190px"><label class="lb">Tanggal Pemantauan</label><input type="date" value="${esc(ld)}" onchange="ld=this.value;render()"></div></div>`;
   if(!ld){view.innerHTML=h+'<div class="card empty">Pilih tanggal pemantauan terlebih dahulu.</div>';return}
   const chips=inf.member.split(',').map(x=>x.trim()).filter(Boolean).map(m=>`<span class="b neu chip">${esc(m)}</span>`).join('')||'-';
-  h+=`<div class="card info"><div><div class="l">Tanggal Pemantauan</div><b>${fmt(ld)}</b></div><div><div class="l">Member</div>${chips}</div><div><div class="l">Zona</div><b>${esc(inf.zona||'-')}</b></div><button class="sm" onclick="editInfo()">Edit</button></div>`;
+  const zs=['',...ZONES,...(inf.zona&&!ZONES.includes(inf.zona)?[inf.zona]:[])];
+  h+=`<div class="card info"><div><div class="l">Tanggal Pemantauan</div><b>${fmt(ld)}</b></div><div><div class="l">Member <button class="sm" style="margin-left:6px" onclick="editInfo()">Edit</button></div>${chips}</div><div><div class="l" style="margin-bottom:4px">Zona</div><select onchange="setZona(this.value)">${zs.map(z=>`<option value="${esc(z)}"${z===(inf.zona||'')?' selected':''}>${esc(z)||'— Pilih zona —'}</option>`).join('')}</select></div></div>`;
   h+=`<div class="sec"><h3>Temuan - Tim ${lt}</h3><div><button class="sm" onclick="loadSheet()">↻ Muat ulang</button> <a class="btnl" href="${SHEET_URL}" target="_blank" rel="noopener">Buka Spreadsheet</a></div></div>`;
   if(shState==='idle'||shState==='loading'){view.innerHTML=h+'<div class="card empty">Memuat data dari Google Sheets…</div>';return}
   if(shState==='err'){view.innerHTML=h+`<div class="card empty" style="color:var(--r)">${esc(shErr)}</div>`;return}
-  const rows=SH.filter(x=>x.d===ld&&x.n===lt),mk=(on,c='')=>`<td class="c ${on?c:''}">${on?'<span class="ck">✓</span>':''}</td>`;
+  const all=rowsAll(),rows=all.filter(x=>x.d===ld&&x.n===lt);VR=rows;
+  const mk=(on,c='')=>`<td class="c ${on?c:''}">${on?'<span class="ck">✓</span>':''}</td>`;
   h+=`<div class="wrap"><table class="fd"><thead>
-  <tr><th rowspan="2">NO</th><th rowspan="2">AREA</th><th rowspan="2">TEMUAN</th><th rowspan="2">FOTO TEMUAN</th><th colspan="3">KATEGORI</th><th colspan="7">STOP 6</th><th colspan="3">RISK RANK</th><th rowspan="2">SARAN TINDAKAN PERBAIKAN</th></tr>
+  <tr><th rowspan="2">NO</th><th rowspan="2">AREA</th><th rowspan="2">TEMUAN</th><th rowspan="2">FOTO TEMUAN</th><th colspan="3">KATEGORI</th><th colspan="7">STOP 6</th><th colspan="3">RISK RANK</th><th rowspan="2">SARAN TINDAKAN PERBAIKAN</th><th rowspan="2">AKSI</th></tr>
   <tr>${KAT.map(k=>`<th>${k.toUpperCase()}</th>`).join('')}${STOP.map(k=>`<th>${k}</th>`).join('')}${RISK.map(k=>`<th>${k}</th>`).join('')}</tr></thead><tbody>`;
-  rows.forEach((x,n)=>{h+=`<tr><td class="c">${n+1}</td><td class="t">${esc(x.area)}</td><td class="t">${esc(x.temuan)}</td><td class="c">${fotoHtml(x)}</td>`
+  rows.forEach((x,n)=>{h+=`<tr><td class="c">${n+1}</td><td class="t">${esc(x.area)}</td><td class="t">${esc(x.temuan)}</td><td class="c f">${fotoHtml(x,n)}</td>`
     +KAT.map(k=>mk(x.kat.includes(k.toLowerCase()))).join('')+STOP.map(k=>mk(x.stop===k)).join('')+RISK.map(k=>mk(x.risk===k,'r'+k)).join('')
-    +`<td class="t">${esc(x.saran)}</td></tr>`});
-  if(!rows.length)h+=`<tr><td colspan="18" class="empty">Belum ada temuan untuk Tim ${lt} pada tanggal ini</td></tr>`;
+    +`<td class="t">${esc(x.saran)}</td><td class="c"><div class="ac"><button class="sm" onclick="editT(${n})">Edit</button><button class="sm" onclick="delT(${n})">Hapus</button></div></td></tr>`});
+  if(!rows.length)h+=`<tr><td colspan="19" class="empty">Belum ada temuan untuk Tim ${lt} pada tanggal ini</td></tr>`;
   h+='</tbody></table></div>';
-  const oth=SH.filter(x=>x.d===ld&&x.n!==lt);
-  if(!rows.length&&oth.length)h+=`<div class="l" style="margin-top:8px">Ada ${oth.length} temuan pada tanggal ini dengan isian Tim: ${[...new Set(oth.map(x=>x.tim||'(kosong)'))].map(esc).join(', ')}.</div>`;
+  const hid=SH.filter(x=>D.del[x.key]&&x.d===ld&&x.n===lt).length,oth=all.filter(x=>x.d===ld&&x.n!==lt);
+  h+=`<div class="l" style="margin-top:8px">Edit dan Hapus hanya mengubah tampilan di browser ini, data di Google Sheets tidak berubah.${hid?` ${hid} temuan disembunyikan · <a href="#" onclick="restoreT();return false">Pulihkan</a>`:''}</div>`;
+  if(!rows.length&&oth.length)h+=`<div class="l" style="margin-top:4px">Ada ${oth.length} temuan pada tanggal ini dengan isian Tim: ${[...new Set(oth.map(x=>x.tim||'(kosong)'))].map(esc).join(', ')}.</div>`;
   view.innerHTML=h+LEG;
 }
 function dlgOpen(ttl,cols,vals,cb){onSave=cb;dt.textContent=ttl;
-  fields.innerHTML=cols.map((c,j)=>{const v=vals[j]??'';return `<label>${c[0]}</label>`+(c[1]==='sel'?`<select>${c[2].map(o=>`<option${o===v?' selected':''}>${esc(o)}</option>`).join('')}</select>`:`<input type="${c[1]||'text'}" value="${esc(v)}">`)}).join('');
+  fields.innerHTML=cols.map((c,j)=>{const v=vals[j]??'';let inp;
+    if(c[1]==='sel')inp=`<select>${c[2].map(o=>`<option value="${esc(o)}"${o===v?' selected':''}>${esc(o)||'— Pilih —'}</option>`).join('')}</select>`;
+    else if(c[1]==='chk')inp=`<div class="chk">${c[2].map(o=>`<label class="ci"><input type="checkbox" value="${esc(o)}"${(v||[]).includes(o)?' checked':''}> ${esc(o)}</label>`).join('')}</div>`;
+    else inp=`<input type="${c[1]||'text'}" value="${esc(v)}">`;
+    return `<div class="fld" data-t="${c[1]||''}"><label>${c[0]}</label>${inp}</div>`}).join('');
   dlg.showModal()}
-function save(){const v=[...fields.querySelectorAll('input,select')].map(e=>e.value.trim());if(!v[0]){fields.querySelector('input').focus();return}
+function save(){const v=[...fields.querySelectorAll('.fld')].map(f=>f.dataset.t==='chk'?[...f.querySelectorAll('input:checked')].map(i=>i.value):f.querySelector('input,select').value.trim());
+  if(!v[0]){fields.querySelector('input,select').focus();return}
   onSave(v);sv();dlg.close();render()}
 function openF(i){dlgOpen((i>=0?'Edit ':'Tambah ')+P[cur].t,P[cur].c,i>=0?D[cur][i]:[],v=>{i>=0?D[cur][i]=v:D[cur].push(v)})}
 function del(i){if(confirm('Hapus data ini?')){D[cur].splice(i,1);sv();render()}}
-function editInfo(){const inf=D.info[lt+'|'+ld]||D.team[lt];
-  dlgOpen('Member & Zona - Tim '+lt,[['Member (pisahkan dengan koma)'],['Zona']],[inf.member,inf.zona],v=>{D.info[lt+'|'+ld]={member:v[0],zona:v[1]}})}
-
+function editInfo(){const k=lt+'|'+ld,inf=D.info[k]||D.team[lt];
+  dlgOpen('Member - Tim '+lt,[['Member (pisahkan dengan koma)']],[inf.member],v=>{D.info[k]={...inf,member:v[0]}})}
+function editT(i){const x=VR[i];
+  dlgOpen('Edit Temuan',[['Area'],['Temuan'],['Kategori','chk',KAT],['STOP 6','sel',['',...STOP]],['Risk Rank','sel',['',...RISK]],['Saran Tindakan Perbaikan']],
+    [x.area,x.temuan,KAT.filter(k=>x.kat.includes(k.toLowerCase())),x.stop,x.risk,x.saran],
+    v=>{D.ov[x.key]={area:v[0],temuan:v[1],kat:v[2].map(k=>k.toLowerCase()),stop:v[3],risk:v[4],saran:v[5]}})}
+function delT(i){if(confirm('Hapus temuan ini dari tampilan website?\n(Data di Google Sheets tidak ikut terhapus.)')){D.del[VR[i].key]=true;sv();render()}}
+function restoreT(){SH.forEach(x=>{if(x.d===ld&&x.n===lt)delete D.del[x.key]});sv();render()}
 const h0=location.hash.slice(1);
 if(ALL[h0]){cur=h0;subOpen=!!ALL[h0].parent}
-nav();render();loadSheet();
+nav();render();loadSheet();loadZones();
 </script>
 </body>
 </html>
