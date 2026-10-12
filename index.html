@@ -93,10 +93,13 @@ apar:{g:'Safety',t:'Checksheet APAR',c:[['Kode APAR'],['Lokasi'],['Jenis / Kapas
 hydrant:{g:'Safety',t:'Checksheet Hydrant',c:[['Kode Hydrant'],['Lokasi'],['Tekanan (bar)'],['Tgl Cek','date'],['Petugas'],['Kondisi','sel',K]],d:[['HYD-01','Halaman Depan','7.5','2026-10-02','Dedi','Baik'],['HYD-02','Area Parkir','5.0','2026-10-02','Dedi','Perlu Perbaikan']]},
 pic:{g:'Safety',parent:1,t:'PIC',c:[['Nama PIC'],['Area Tanggung Jawab'],['No. HP'],['Status','sel',['Aktif','Nonaktif']]],d:[['Agus','Workshop','0812-0000-0001','Aktif'],['Siti','Gudang A','0812-0000-0002','Aktif'],['Rudi','Area Parkir','0812-0000-0003','Aktif']]},
 bangunan:{g:'Building',t:'Status Bangunan',c:[['Nama Bangunan'],['Lokasi'],['Luas (m²)'],['Jml Lantai'],['Pemeliharaan Terakhir','date'],['Kondisi','sel',['Baik','Perlu Perawatan','Rusak']]],d:[['Gedung Kantor A','Blok 1','2400','3','2026-08-12','Baik'],['Gudang B','Blok 3','1800','1','2026-05-20','Perlu Perawatan']]},
-jo:{g:'Building',t:'JO (Job Order)',c:[['No. JO'],['Bangunan'],['Uraian Pekerjaan'],['Tgl','date'],['PIC'],['Status','sel',['Open','Progress','Selesai']]],d:[['JO-2610-001','Gudang B','Perbaikan atap bocor','2026-10-03','Joko','Progress'],['JO-2610-002','Gedung A','Pengecatan lobby','2026-10-08','Eko','Open']]}
+jo:{g:'Building',t:'JO (Job Order)',c:[['No. JO'],['Bangunan'],['Uraian Pekerjaan'],['Tgl','date'],['PIC'],['Status','sel',['Open','Progress','Selesai']]],d:[['JO-2610-001','Gudang B','Perbaikan atap bocor','2026-10-03','Joko','Progress'],['JO-2610-002','Gedung A','Pengecatan lobby','2026-10-08','Eko','Open']]},
+stokmt:{g:'Maintenance',t:'Stok Maintenance',c:[['Kode Barang'],['Nama Barang'],['Kategori'],['Satuan'],['Stok'],['Stok Minimum'],['Lokasi Simpan'],['Status','sel',['Aman','Menipis','Habis']]],d:[['MT-001','Bearing 6204','Spare part','pcs','24','10','Gudang Maintenance','Aman'],['MT-002','V-Belt B-52','Spare part','pcs','4','6','Gudang Maintenance','Menipis'],['MT-003','Lampu LED 18W','Elektrikal','pcs','0','10','Rak E-2','Habis']]},
+xilin:{g:'Maintenance',t:'Monitor Xilin',c:[['Kode Unit'],['Nama Unit / Lokasi'],['Tgl Monitoring','date'],['Hasil / Nilai'],['Petugas'],['Status','sel',['Normal','Perlu Perhatian','Gangguan']]],d:[['XL-01','Unit Xilin Lt.1','2026-10-05','Normal','Joko','Normal'],['XL-02','Unit Xilin Gudang B','2026-10-05','Di atas batas wajar','Eko','Perlu Perhatian']]},
+stokcs:{g:'Consumable',t:'Stok Consumable',c:[['Kode Barang'],['Nama Barang'],['Kategori'],['Satuan'],['Stok'],['Stok Minimum'],['Lokasi Simpan'],['Status','sel',['Aman','Menipis','Habis']]],d:[['CS-001','Sarung Tangan Katun','APD','pasang','120','50','Gudang Umum','Aman'],['CS-002','Masker Medis','APD','box','3','5','Gudang Umum','Menipis'],['CS-003','Tisu Roll','Kebersihan','pack','0','10','Rak C-1','Habis']]}
 };
 const ALL={...P,leader:{g:'Safety',parent:1,t:'Leader'}};
-const GRP=['Legal','Safety','Building'],ICON={Legal:'⚖️',Safety:'🧯',Building:'🏢'};
+const GRP=['Legal','Safety','Building','Maintenance','Consumable'],ICON={Legal:'⚖️',Safety:'🧯',Building:'🏢',Maintenance:'🔧',Consumable:'📦'};
 const TEAMS=[1,2,3,4,5],STOP=['A','B','C','D','E','F','O'],KAT=['Ringkas','Rapi','Resik'],RISK=['A','B','C'];
 const today=new Date().toLocaleDateString('sv-SE');
 let D={},cur='home',q='',lt='1',ld=today,subOpen=false,onSave=null,SI={},needFirst=true;
@@ -104,7 +107,7 @@ try{D=JSON.parse(localStorage.getItem('masterinfra_v2')||'{}')||{}}catch(e){D={}
 for(const k in P)if(!D[k])D[k]=P[k].d.map(r=>[...r]);
 const sv=()=>{try{localStorage.setItem('masterinfra_v2',JSON.stringify(D))}catch(e){}};
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-const cls=v=>v==='Nonaktif'?'neu':['Aktif','Berlaku','Baik','Closed','Selesai'].includes(v)?'good':['Akan Habis','Review','Perlu Perbaikan','Perlu Perawatan','Progress'].includes(v)?'warn':['Expired','Kadaluarsa','Rusak','Open'].includes(v)?'bad':'';
+const cls=v=>v==='Nonaktif'?'neu':['Aktif','Berlaku','Baik','Closed','Selesai','Aman','Normal'].includes(v)?'good':['Akan Habis','Review','Perlu Perbaikan','Perlu Perawatan','Progress','Menipis','Perlu Perhatian'].includes(v)?'warn':['Expired','Kadaluarsa','Rusak','Open','Habis','Gangguan'].includes(v)?'bad':'';
 const fmt=d=>d?new Date(d+'T00:00:00').toLocaleDateString('id-ID',{weekday:'long',day:'numeric',month:'long',year:'numeric'}):'-';
 
 const SHEET_ID='10yxuxmay6aQ8Gx01videkRj0roRK6iNHfPtZgRtUvfg',SHEET_TAB='Form Responses 1';
