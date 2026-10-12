@@ -40,14 +40,14 @@ table{border-collapse:collapse;width:100%;min-width:640px}
 th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);white-space:nowrap}
 th{font-size:12px;color:var(--mut);text-transform:uppercase;letter-spacing:.04em;background:var(--bg)}
 tr:last-child td{border-bottom:0}
-.fd{min-width:1380px}.fd td.f{min-width:250px}.ac{display:flex;flex-direction:column;gap:6px}
-.fd th,.fd td{border:1px solid var(--line);padding:8px}
-.fd th{text-align:center;vertical-align:middle;color:var(--tx)}
-.fd td.c{text-align:center}.fd td.t{white-space:normal;min-width:170px}
+.fd{min-width:900px;width:100%;table-layout:fixed}.ac{display:flex;flex-direction:column;gap:6px}.ac .sm{padding:4px 2px;width:100%}
+.fd th,.fd td{border:1px solid var(--line);padding:6px 4px;white-space:normal}.fd td{overflow-wrap:anywhere}
+.fd th{text-align:center;vertical-align:middle;color:var(--tx);font-size:10.5px;letter-spacing:0;padding:6px 2px}
+.fd td.c{text-align:center}.fd td.t{font-size:13px}
 .ck{font-weight:700;color:var(--g)}.rkA{color:var(--r)}.rkB{color:var(--w)}
 .info{display:grid;grid-template-columns:1fr 1.2fr 1.6fr;gap:16px;align-items:start;margin-bottom:16px}
-.info b{font-size:15px}.chip{margin:2px 2px 0 0;display:inline-block}
-.sec{display:flex;align-items:center;justify-content:space-between;margin:6px 0 10px}.sec h3{margin:0}
+.info b{font-size:16px}.chip{margin:3px 5px 0 0;display:inline-block;font-size:15px;padding:5px 13px;font-weight:600;color:var(--tx)}
+.sec{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin:6px 0 10px}.btnl.p{background:var(--pri);border-color:var(--pri);color:#fff}.sec h3{margin:0}
 .b{padding:3px 9px;border-radius:99px;font-size:12px;font-weight:600}
 .good{background:var(--gb);color:var(--g)}.warn{background:var(--wb);color:var(--w)}.bad{background:var(--rb);color:var(--r)}.neu{background:var(--bg);color:var(--mut);border:1px solid var(--line)}
 .empty{padding:30px;text-align:center;color:var(--mut)}
@@ -55,7 +55,7 @@ dialog{border:1px solid var(--line);border-radius:14px;background:var(--card);co
 dialog::backdrop{background:rgba(0,0,0,.5)}
 dialog label{display:block;font-size:12px;color:var(--mut);margin:10px 0 4px}
 .act{display:flex;justify-content:flex-end;gap:8px;margin-top:18px}
-.ph{width:230px;height:170px;object-fit:cover;border-radius:6px;display:block;margin:0 auto 6px;cursor:zoom-in;background:var(--bg)}
+.ph{width:100%;max-width:240px;height:auto;aspect-ratio:4/3;object-fit:cover;border-radius:6px;display:block;margin:0 auto 6px;cursor:zoom-in;background:var(--bg)}
 .btnl{display:inline-block;padding:4px 9px;font-size:12px;border:1px solid var(--line);border-radius:8px;color:var(--tx);text-decoration:none;background:var(--card)}
 .rA{background:#ff3b0a}.rB{background:#ffff00}.rC{background:#1fb4f0}
 .fd td.rA .ck,.fd td.rB .ck,.fd td.rC .ck{color:#000}
@@ -111,7 +111,8 @@ const SHEET_ID='10yxuxmay6aQ8Gx01videkRj0roRK6iNHfPtZgRtUvfg',SHEET_TAB='Form Re
 const SHEET_URL='https://docs.google.com/spreadsheets/d/'+SHEET_ID+'/edit?usp=sharing';
 // ===== KONFIGURASI =====
 // Tempel URL Web App Apps Script (hasil Deploy dari Code.gs) di antara tanda kutip agar Edit/Hapus/Member/Zona tersimpan ke Google Sheets.
-const APPS_SCRIPT_URL='https://script.google.com/macros/s/AKfycbw7k7iV_hUFEBDknFy_l-FUUkIqpxXfxWLVnqqQ39f393LscRFk5onWsC_0xKHzH_1B/exec';
+const APPS_SCRIPT_URL='';
+const FORM_URL='https://docs.google.com/forms/d/e/1FAIpQLSdMsZ02sHkoKdDFx55pHmYDQ4zksJ-9nIoZeXtJcKwV6UmZBg/viewform';   // form pengisian temuan
 const DEFAULT_ZONA='CDC Plant 2';   // zona untuk data pada spreadsheet temuan ini
 const INFO_TAB='Info Tim';          // tab di spreadsheet temuan (dibuat otomatis oleh Code.gs)
 const STOPL={A:'A (apparatus - terjepit mesin)',B:'B (big heavy - tertimpa benda)',C:'C (car - tertabrak kendaraan)',D:'D (drop - terjatuh dari ketinggian)',E:'E (electrical - tersengat listrik)',F:'F (fire - panas & kebakaran)',O:'O (others)'};
@@ -240,12 +241,12 @@ function renderLeader(){
   const chips=inf.member.split(',').map(x=>x.trim()).filter(Boolean).map(m=>`<span class="b neu chip">${esc(m)}</span>`).join('')||'-';
   const zs=ZONES.includes(inf.zona)?ZONES:[...ZONES,inf.zona];
   h+=`<div class="card info"><div><div class="l" style="margin-bottom:4px">Tanggal Pemantauan</div><b>${fmt(ld)}</b></div><div><div class="l" style="margin-bottom:4px">Zona</div><select onchange="setZona(this.value)">${zs.map(z=>`<option value="${esc(z)}"${z===inf.zona?' selected':''}>${esc(z)}</option>`).join('')}</select></div><div><div class="l">Member <button class="sm" style="margin-left:6px" onclick="editInfo()">Edit</button></div>${chips}</div></div>`;
-  h+=`<div class="sec"><h3>Temuan - Tim ${lt}</h3><div><button class="sm" onclick="loadSheet()">↻ Muat ulang</button> <a class="btnl" href="${SHEET_URL}" target="_blank" rel="noopener">Buka Spreadsheet</a></div></div>`;
+  h+=`<div class="sec"><h3>Temuan - Tim ${lt}</h3><div><button class="sm" onclick="loadSheet()">↻ Muat ulang</button> <a class="btnl" href="${SHEET_URL}" target="_blank" rel="noopener">Buka Spreadsheet</a> <a class="btnl p" href="${FORM_URL}" target="_blank" rel="noopener">📝 Isi Form Temuan</a></div></div>`;
   if(shState==='idle'||shState==='loading'){view.innerHTML=h+'<div class="card empty">Memuat data dari Google Sheets…</div>';return}
   if(shState==='err'){view.innerHTML=h+`<div class="card empty" style="color:var(--r)">${esc(shErr)}</div>`;return}
   const rows=SH.filter(x=>x.d===ld&&x.n===lt);VR=rows;
   const mk=(on,c='')=>`<td class="c ${on?c:''}">${on?'<span class="ck">✓</span>':''}</td>`;
-  h+=`<div class="wrap"><table class="fd"><thead>
+  h+=`<div class="wrap"><table class="fd"><colgroup>${[3,8.5,12.5,16,5,5,5,2.4,2.4,2.4,2.4,2.4,2.4,2.4,2.4,2.4,2.4,12.5,7.5].map(w=>`<col style="width:${w}%">`).join('')}</colgroup><thead>
   <tr><th rowspan="2">NO</th><th rowspan="2">AREA</th><th rowspan="2">TEMUAN</th><th rowspan="2">FOTO TEMUAN</th><th colspan="3">KATEGORI</th><th colspan="7">STOP 6</th><th colspan="3">RISK RANK</th><th rowspan="2">SARAN TINDAKAN PERBAIKAN</th><th rowspan="2">AKSI</th></tr>
   <tr>${KAT.map(k=>`<th>${k.toUpperCase()}</th>`).join('')}${STOP.map(k=>`<th>${k}</th>`).join('')}${RISK.map(k=>`<th>${k}</th>`).join('')}</tr></thead><tbody>`;
   rows.forEach((x,n)=>{h+=`<tr><td class="c">${n+1}</td><td class="t">${esc(x.area)}</td><td class="t">${esc(x.temuan)}</td><td class="c f">${fotoHtml(x,n)}</td>`
