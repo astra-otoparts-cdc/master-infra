@@ -232,7 +232,7 @@ function printForm(){
   const img=id=>`<img src="https://lh3.googleusercontent.com/d/${id}=w400" referrerpolicy="no-referrer" onerror="if(!this.dataset.f){this.dataset.f=1;this.src='https://drive.google.com/thumbnail?id=${id}&sz=w400'}else{this.outerHTML='(foto)'}">`;
   let body=rows.map((x,n)=>`<tr><td>${n+1}</td><td class="l">${esc(x.area)}</td><td class="l">${esc(x.temuan)}</td><td class="ph">${x.fotos.map(img).join('')||'-'}</td>`
     +KAT.map(k=>mk(x.kat.includes(k.toLowerCase()))).join('')+STOP.map(k=>mk(x.stop.includes(k))).join('')+RISK.map(k=>mk(x.risk===k)).join('')+`<td class="l">${esc(x.saran)}</td></tr>`).join('');
-  for(let i=rows.length;i<2;i++)body+=`<tr class="bl">${'<td></td>'.repeat(18)}</tr>`;
+  if(!rows.length)body=`<tr class="bl"><td colspan="18">Tidak ada temuan</td></tr>`;
   const W=[3.5,9,18,15,4.5,4.5,4.5,2.6,2.6,2.6,2.6,2.6,2.6,2.6,2.6,2.6,2.6,14];
   const doc=`<!DOCTYPE html><html lang="id"><head><meta charset="utf-8"><title>Checksheet Safety Patrol - Tim ${esc(lt)} - ${esc(ld)}</title><style>
 @page{size:A4 landscape;margin:8mm}
