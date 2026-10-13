@@ -70,6 +70,12 @@ table.lg{min-width:0;width:auto;border:1px solid var(--tx)}.lg td{border:1px sol
 .nv{background:rgba(255,255,255,.15);color:#fff;border:0;font-size:28px;padding:10px 14px}.nv[hidden]{display:none}
 dialog .ci{display:inline-flex;align-items:center;gap:6px;margin:0 14px 0 0;color:var(--tx);font-size:14px}.ci input{width:auto}.chk{padding:4px 0}
 #tst{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:#111;color:#fff;padding:9px 16px;border-radius:99px;font-size:13px;z-index:60}#tst[hidden]{display:none}
+dialog{max-height:94vh;overflow:auto}dialog.wide{width:min(940px,96vw)}
+.dwrap{display:flex;gap:22px;align-items:flex-start}.dwrap form{flex:1 1 400px;min-width:0}
+#dleg{flex:0 0 auto;max-width:100%;overflow-x:auto;border-left:1px solid var(--line);padding-left:20px}#dleg[hidden]{display:none}
+.legv>div+div{margin-top:16px}#dleg .lg td{padding:4px 8px;font-size:12.5px}
+.sm.ed{background:var(--pri);border-color:var(--pri);color:#fff}.sm.dl{background:var(--r);border-color:var(--r);color:#fff}
+@media (max-width:820px){.dwrap{flex-direction:column}#dleg{border-left:0;border-top:1px solid var(--line);padding:14px 0 0}}
 @media (max-width:820px){aside{position:fixed;z-index:5;left:-270px;transition:left .2s;padding-top:calc(18px + env(safe-area-inset-top,0px))}aside.open{left:0}#burger{display:block}main{padding:16px}.info{grid-template-columns:1fr}}
 </style>
 </head>
@@ -79,7 +85,7 @@ dialog .ci{display:inline-flex;align-items:center;gap:6px;margin:0 14px 0 0;colo
   <div class="top"><button id="burger" onclick="side.classList.toggle('open')">☰</button><div><div class="crumb" id="crumb"></div><h1 id="title"></h1></div></div>
   <div id="view"></div>
 </main>
-<dialog id="dlg"><form method="dialog" onsubmit="return false"><h3 id="dt" style="margin:0 0 4px"></h3><div id="fields"></div><div class="act"><button type="button" onclick="dlg.close()">Batal</button><button type="button" class="p" id="sbtn" onclick="save()">Simpan</button></div></form></dialog>
+<dialog id="dlg"><div class="dwrap"><form method="dialog" onsubmit="return false"><h3 id="dt" style="margin:0 0 4px"></h3><div id="fields"></div><div class="act"><button type="button" onclick="dlg.close()">Batal</button><button type="button" class="p" id="sbtn" onclick="save()">Simpan</button></div></form><div id="dleg" hidden></div></div></dialog>
 <div id="lb" hidden><div class="lbt"><button onclick="closeLB()">← Kembali ke tabel</button><b id="lbc"></b><span class="hint">Klik foto untuk membuka file di Google Drive</span></div><div class="lbm"><button id="lbp" class="nv" onclick="stepLB(-1)">‹</button><a id="lba" target="_blank" rel="noopener"><img id="lbi" alt="Foto temuan" referrerpolicy="no-referrer"></a><button id="lbn" class="nv" onclick="stepLB(1)">›</button></div></div>
 <div id="tst" hidden></div>
 <script>
@@ -114,7 +120,7 @@ const SHEET_ID='10yxuxmay6aQ8Gx01videkRj0roRK6iNHfPtZgRtUvfg',SHEET_TAB='Form Re
 const SHEET_URL='https://docs.google.com/spreadsheets/d/'+SHEET_ID+'/edit?usp=sharing';
 // ===== KONFIGURASI =====
 // Tempel URL Web App Apps Script (hasil Deploy dari Code.gs) di antara tanda kutip agar Edit/Hapus/Member/Zona tersimpan ke Google Sheets.
-const APPS_SCRIPT_URL='https://script.google.com/macros/s/AKfycbw7k7iV_hUFEBDknFy_l-FUUkIqpxXfxWLVnqqQ39f393LscRFk5onWsC_0xKHzH_1B/exec';
+const APPS_SCRIPT_URL='';
 const FORM_URL='https://docs.google.com/forms/d/e/1FAIpQLSdMsZ02sHkoKdDFx55pHmYDQ4zksJ-9nIoZeXtJcKwV6UmZBg/viewform';   // form pengisian temuan
 const DEFAULT_ZONA='CDC Plant 2';   // zona untuk data pada spreadsheet temuan ini
 const INFO_TAB='Info Tim';          // tab di spreadsheet temuan (dibuat otomatis oleh Code.gs)
@@ -224,8 +230,10 @@ const RISKD=[['A',['Kematian','Kehilangan anggota tubuh','Kehilangan fungsi tubu
 // Keterangan zona pada lembar cetak (ubah sesuai kebutuhan)
 const ZONAD=[['Zona A','Warehouse, Charging P.Mover & Charging Forklift'],['Zona B','Local Process Lt.1, Shipping/Loading Dock, R.Admin Fakturis, TPS Domestik, Tangki Solar & R.Koperasi'],['Zona C','R.Trafo & Panel, R.Pompa, TPS LB3, R.Claim, R.Maintenance, R.Klinik & Posko Security'],['Zona D','R.Office Lt.2 & Local Process Lt.2']];
 const LOGO_ID='1mJkiTMn4jocwFRmjuBXZd5XslKQpyOV0';   // logo Astra Otoparts (file Google Drive, harus dibagikan "Siapa saja yang memiliki link")
-const LEG=`<div class="leg"><div><div class="lt">KATEGORI STOP 6</div><table class="lg">${STOPD.map(x=>`<tr><td class="k">${x[0]}</td><td>: ${x[1]} (${x[2]})</td></tr>`).join('')}</table></div>
-<div><div class="lt">RISK RANK</div><table class="lg">${RISKD.map(x=>`<tr><td class="rr r${x[0]}">RANK ${x[0]}</td><td>${x[1].map(i=>'- '+i).join('<br>')}</td></tr>`).join('')}</table></div></div>`;
+const LEG_STOP=`<div><div class="lt">KATEGORI STOP 6</div><table class="lg">${STOPD.map(x=>`<tr><td class="k">${x[0]}</td><td>: ${x[1]} (${x[2]})</td></tr>`).join('')}</table></div>`;
+const LEG_RISK=`<div><div class="lt">RISK RANK</div><table class="lg">${RISKD.map(x=>`<tr><td class="rr r${x[0]}">RANK ${x[0]}</td><td>${x[1].map(i=>'- '+i).join('<br>')}</td></tr>`).join('')}</table></div>`;
+const LEG=`<div class="leg">${LEG_STOP}${LEG_RISK}</div>`;
+const LEGV=`<div class="legv">${LEG_STOP}${LEG_RISK}</div>`;
 function printForm(){
   if(!SH||!ld){alert('Data belum termuat atau tanggal belum dipilih.');return}
   const inf=infoOf(),rows=SH.filter(x=>x.d===ld&&x.n===lt);
@@ -306,14 +314,14 @@ function renderLeader(){
   <tr>${KAT.map(k=>`<th>${k.toUpperCase()}</th>`).join('')}${STOP.map(k=>`<th>${k}</th>`).join('')}${RISK.map(k=>`<th>${k}</th>`).join('')}</tr></thead><tbody>`;
   rows.forEach((x,n)=>{h+=`<tr><td class="c">${n+1}</td><td class="t">${esc(x.area)}</td><td class="t">${esc(x.temuan)}</td><td class="c f">${fotoHtml(x,n)}</td>`
     +KAT.map(k=>mk(x.kat.includes(k.toLowerCase()))).join('')+STOP.map(k=>mk(x.stop.includes(k))).join('')+RISK.map(k=>mk(x.risk===k,'r'+k)).join('')
-    +`<td class="t">${esc(x.saran)}</td><td class="c"><div class="ac"><button class="sm" onclick="editT(${n})">Edit</button><button class="sm" onclick="delT(${n})">Hapus</button></div></td></tr>`});
+    +`<td class="t">${esc(x.saran)}</td><td class="c"><div class="ac"><button class="sm ed" onclick="editT(${n})">Edit</button><button class="sm dl" onclick="delT(${n})">Hapus</button></div></td></tr>`});
   if(!rows.length)h+=`<tr><td colspan="19" class="empty">Belum ada temuan untuk Tim ${lt} pada tanggal ini</td></tr>`;
   h+='</tbody></table></div>';
   const oth=SH.filter(x=>x.d===ld&&x.n!==lt);
   if(!rows.length&&oth.length)h+=`<div class="l" style="margin-top:8px">Ada ${oth.length} temuan pada tanggal ini dengan isian Tim: ${[...new Set(oth.map(x=>x.tim||'(kosong)'))].map(esc).join(', ')}.</div>`;
   view.innerHTML=h+LEG;
 }
-function dlgOpen(ttl,cols,vals,cb,req=true){onSave=cb;needFirst=req;dt.textContent=ttl;
+function dlgOpen(ttl,cols,vals,cb,req=true,leg=false){onSave=cb;needFirst=req;dlg.classList.toggle('wide',!!leg);dleg.hidden=!leg;if(leg)dleg.innerHTML=LEGV;dt.textContent=ttl;
   fields.innerHTML=cols.map((c,j)=>{const v=vals[j]??'';let inp;
     if(c[1]==='sel')inp=`<select>${c[2].map(o=>`<option value="${esc(o)}"${o===v?' selected':''}>${esc(o)||'— Pilih —'}</option>`).join('')}</select>`;
     else if(c[1]==='chk')inp=`<div class="chk">${c[2].map(o=>`<label class="ci"><input type="checkbox" value="${esc(o)}"${(v||[]).includes(o)?' checked':''}> ${esc(o)}</label>`).join('')}</div>`;
@@ -340,7 +348,7 @@ function editT(i){const x=VR[i];
       const j=await api({action:'update',row:x.row,ts:x.ts,area0:x.area,temuan0:x.temuan,data:d});if(!j)return false;
       if(j.row)x.row=j.row;
       Object.assign(x,{area:v[0],temuan:v[1],kat:v[2].map(k=>k.toLowerCase()),stop:v[3],risk:v[4],saran:v[5]});
-      loadSheet(true)})}
+      loadSheet(true)},true,true)}
 async function delT(i){const x=VR[i];if(!confirm('Hapus temuan ini dari Google Sheets?\nTindakan ini tidak dapat dibatalkan.'))return;
   const j=await api({action:'delete',row:x.row,ts:x.ts,area0:x.area,temuan0:x.temuan});if(!j)return;
   const r0=j.row||x.row;SH=SH.filter(y=>y!==x);SH.forEach(y=>{if(y.row>r0)y.row--});render();loadSheet(true)}
