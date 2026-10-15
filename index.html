@@ -1418,6 +1418,8 @@ function masterForm(i){
       if(!v[5]){alert('Tanggal expired wajib diisi.');return false}
       const d={plant:v[0],jenis:v[2],kap:String(kap),lokasi:v[4],exp:v[5]};
       const j=await api(x?{action:'aparUpdate',kode:x.kode,...d}:{action:'aparAdd',...d});if(!j)return false;
+      if(j.exp===undefined)alert('PERHATIAN: tanggal expired TIDAK tersimpan di Google Sheets.\nApps Script di server masih versi lama. Tempel Code.gs terbaru di editor Apps Script, lalu Deploy → Manage deployments → Edit → Version: New version.');
+      else if(j.exp!==d.exp)alert('Tanggal expired di Google Sheets ('+(j.exp||'kosong')+') berbeda dari yang diisi ('+d.exp+'). Periksa kolom Tanggal Expired di tab Master APAR.');
       if(x)Object.assign(x,d);else AM.push({kode:j.kode,...d});
       toast(x?'Tersimpan ✓':'Tersimpan: '+j.kode+' ('+d.plant+')');loadAparMaster()});
   if(!x){const sel=fields.querySelector('.fld select'),ro=fields.querySelector('.ro');
