@@ -119,7 +119,6 @@ perijinan:{g:'Legal',t:'Perijinan',c:[['Nama Perijinan'],['No. Dokumen'],['Tgl T
 sop:{g:'Legal',t:'SOP',c:[['Judul SOP'],['No. SOP'],['Revisi'],['Tgl Berlaku','date'],['Status','sel',['Berlaku','Review','Kadaluarsa']]],d:[['SOP Tanggap Darurat Kebakaran','SOP-HSE-001','Rev 02','2025-02-01','Berlaku'],['SOP Pemeliharaan Bangunan','SOP-ENG-007','Rev 01','2024-08-20','Review']]},
 sio:{g:'Legal',t:'SIO',c:[['Nama Operator'],['Jenis SIO'],['No. SIO'],['Masa Berlaku','date'],['Status','sel',S]],d:[['Budi Santoso','Operator Forklift','SIO-F-8891','2027-04-30','Aktif'],['Andi Wijaya','Operator Crane','SIO-C-1120','2026-11-10','Akan Habis']]},
 mou:{g:'Legal',t:'MoU / Kerjasama',c:[['Pihak Kerjasama'],['Ruang Lingkup'],['No. MoU'],['Berakhir','date'],['Status','sel',S]],d:[['PT Sinar Teknik','Maintenance Gedung','MoU-2024/012','2027-01-31','Aktif'],['Dinas Pemadam Kebakaran','Pelatihan & Inspeksi','MoU-2023/044','2026-10-31','Akan Habis']]},
-hydrant:{g:'Safety',parent:'checksheet',s:'Hydrant',t:'Checksheet Hydrant',c:[['Kode Hydrant'],['Lokasi'],['Tekanan (bar)'],['Tgl Cek','date'],['Petugas'],['Kondisi','sel',K]],d:[['HYD-01','Halaman Depan','7.5','2026-10-02','Dedi','Baik'],['HYD-02','Area Parkir','5.0','2026-10-02','Dedi','Perlu Perbaikan']]},
 pic:{g:'Safety',parent:'patrol',s:'PIC',t:'PIC',c:[['Nama PIC'],['Area Tanggung Jawab'],['No. HP'],['Status','sel',['Aktif','Nonaktif']]],d:[['Agus','Workshop','0812-0000-0001','Aktif'],['Siti','Gudang A','0812-0000-0002','Aktif'],['Rudi','Area Parkir','0812-0000-0003','Aktif']]},
 bangunan:{g:'Building',t:'Status Bangunan',c:[['Nama Bangunan'],['Lokasi'],['Luas (m²)'],['Jml Lantai'],['Pemeliharaan Terakhir','date'],['Kondisi','sel',['Baik','Perlu Perawatan','Rusak']]],d:[['Gedung Kantor A','Blok 1','2400','3','2026-08-12','Baik'],['Gudang B','Blok 3','1800','1','2026-05-20','Perlu Perawatan']]},
 jo:{g:'Building',t:'JO (Job Order)',c:[['No. JO'],['Bangunan'],['Uraian Pekerjaan'],['Tgl','date'],['PIC'],['Status','sel',['Open','Progress','Selesai']]],d:[['JO-2610-001','Gudang B','Perbaikan atap bocor','2026-10-03','Joko','Progress'],['JO-2610-002','Gedung A','Pengecatan lobby','2026-10-08','Eko','Open']]},
@@ -129,7 +128,7 @@ stokcs:{g:'Consumable',t:'Stok Consumable',c:[['Kode Barang'],['Nama Barang'],['
 };
 // Menu induk (buka/tutup submenu tanpa pindah halaman)
 const SUBS={Safety:[['checksheet','Checksheet'],['patrol','Safety Patrol']]},PL={checksheet:'Checksheet',patrol:'Safety Patrol'};
-const ALL={apar:{g:'Safety',parent:'checksheet',s:'APAR',t:'Checksheet APAR'},...P,leader:{g:'Safety',parent:'patrol',s:'Leader',t:'Leader'}};
+const ALL={apar:{g:'Safety',parent:'checksheet',s:'APAR',t:'Checksheet APAR'},hydrant:{g:'Safety',parent:'checksheet',s:'Hydrant',t:'Checksheet Hydrant'},...P,leader:{g:'Safety',parent:'patrol',s:'Leader',t:'Leader'}};
 const GRP=['Legal','Safety','Building','Maintenance','Consumable'],ICON={Legal:'⚖️',Safety:'🧯',Building:'🏢',Maintenance:'🔧',Consumable:'📦'};
 const TEAMS=[1,2,3,4,5],STOP=['A','B','C','D','E','F','O'],KAT=['Ringkas','Rapi','Resik'],RISK=['A','B','C'];
 const today=new Date().toLocaleDateString('sv-SE');
@@ -146,6 +145,7 @@ const SHEET_URL='https://docs.google.com/spreadsheets/d/'+SHEET_ID+'/edit?usp=sh
 // ===== KONFIGURASI =====
 // Tempel URL Web App Apps Script (hasil Deploy dari Code.gs) di antara tanda kutip agar Edit/Hapus/Member/Zona tersimpan ke Google Sheets.
 const APPS_SCRIPT_URL='https://script.google.com/macros/s/AKfycbw7k7iV_hUFEBDknFy_l-FUUkIqpxXfxWLVnqqQ39f393LscRFk5onWsC_0xKHzH_1B/exec';   // Safety Patrol (spreadsheet temuan)
+const HYDRANT_SCRIPT_URL='https://script.google.com/macros/s/AKfycbyWWx5ngZ3XJehH9qWN8-zarbD-xhkKLzK_-x4mpU_ejE_yA0lLOacSU-gSs9ZDUNun/exec';   // Checksheet Hydrant (spreadsheet Hydrant) - tempel Web app URL dari project Apps Script Hydrant (Code-Hydrant.gs)
 const APAR_SCRIPT_URL='https://script.google.com/macros/s/AKfycbzXxqWGlI1rGVY8H5RXRoqrLeAIG3_oV409Gkdwh0XFMZ5DFFn0qhXexB40ptZ46izj/exec';   // Checksheet APAR (spreadsheet APAR)
 const FORM_URL='https://docs.google.com/forms/d/e/1FAIpQLSdMsZ02sHkoKdDFx55pHmYDQ4zksJ-9nIoZeXtJcKwV6UmZBg/viewform';   // form pengisian temuan
 const DEFAULT_ZONA='CDC Plant 2';   // zona untuk data pada spreadsheet temuan ini
@@ -206,7 +206,7 @@ function getPin(key){let p='';try{p=sessionStorage.getItem(key)||''}catch(e){}
   if(!p){p=prompt('Masukkan PIN untuk mengubah data di Google Sheets:')||'';if(p)try{sessionStorage.setItem(key,p)}catch(e){}}return p}
 function toast(m){tst.textContent=m;tst.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>{tst.hidden=true},2600)}
 async function api(payload){
-  const isA=/^apar/.test(payload.action),url=isA?APAR_SCRIPT_URL:APPS_SCRIPT_URL,pk=isA?'mi_pin_apar':'mi_pin';
+  const isH=/^hyd/.test(payload.action),isA=/^apar/.test(payload.action),url=isH?HYDRANT_SCRIPT_URL:isA?APAR_SCRIPT_URL:APPS_SCRIPT_URL,pk=isH?'mi_pin_hyd':isA?'mi_pin_apar':'mi_pin';
   if(!url){alert('Fitur ubah/hapus ke Google Sheets belum aktif.\nTempel URL Web App Apps Script ke index.html (petunjuk ada di Code.gs).');return null}
   const pin=getPin(pk);if(!pin)return null;
   toast('Menyimpan ke Google Sheets…');
@@ -230,14 +230,14 @@ function nav(){
   }
   side.innerHTML=h;
 }
-function go(k){cur=k;q='';if(ALL[k]&&ALL[k].parent)subOpen[ALL[k].parent]=true;location.hash=k;side.classList.remove('open');nav();if(k==='apar'&&!AM)loadApar();render()}
+function go(k){cur=k;q='';if(ALL[k]&&ALL[k].parent)subOpen[ALL[k].parent]=true;location.hash=k;side.classList.remove('open');nav();if(k==='apar'&&!AM)loadApar();if(k==='hydrant'&&!YM)loadHyd();render()}
 
 function render(){
   if(cur==='home'){title.textContent='Dashboard';crumb.textContent='Master Infra';
     let h='';
     for(const g of GRP){h+=`<h3>${ICON[g]} ${g}</h3><div class="cards" style="margin-bottom:20px">`;
       for(const k in ALL)if(ALL[k].g===g){
-        const isL=k==='leader',n=isL?(SH?SH.length:'…'):k==='apar'?(AM?AM.length:'…'):D[k].length,al=isL?(SH?SH.filter(r=>r.risk==='A').length:0):k==='apar'?(AM?AM.filter(r=>expState(r)==='bad').length:0):D[k].filter(r=>cls(r[r.length-1])==='bad').length;
+        const isL=k==='leader',n=isL?(SH?SH.length:'…'):k==='apar'?(AM?AM.length:'…'):k==='hydrant'?(YM?YM.length:'…'):D[k].length,al=isL?(SH?SH.filter(r=>r.risk==='A').length:0):k==='apar'?(AM?AM.filter(r=>expState(r)==='bad').length:0):k==='hydrant'?0:D[k].filter(r=>cls(r[r.length-1])==='bad').length;
         h+=`<div class="card k" onclick="go('${k}')"><div class="n">${n}</div><div class="l">${isL?'Temuan Safety Patrol (Leader)':ALL[k].t}</div><div class="l" style="color:var(--r);margin-top:4px">${al?al+(isL?' risiko rank A':' perlu perhatian'):'&nbsp;'}</div></div>`}
       h+='</div>'}
     view.innerHTML=h;return}
@@ -245,6 +245,7 @@ function render(){
   crumb.textContent='Master Infra › '+p.g+(p.parent?' › '+PL[p.parent]:'');
   if(cur==='leader')return renderLeader();
   if(cur==='apar')return renderApar();
+  if(cur==='hydrant')return renderHydrant();
   const rows=D[cur].map((r,i)=>[r,i]).filter(([r])=>r.join(' ').toLowerCase().includes(q.toLowerCase()));
   let h=`<div class="tools"><input class="s" placeholder="Cari..." value="${esc(q)}" oninput="q=this.value;rs(this)"><button class="p" onclick="openF(-1)">+ Tambah</button></div><div class="wrap"><table><thead><tr>`;
   p.c.forEach(c=>h+=`<th>${c[0]}</th>`);h+='<th></th></tr></thead><tbody>';
@@ -1327,14 +1328,14 @@ const qrLink=(k,p)=>baseUrl()+'?cek='+encodeURIComponent(k)+'&plant='+encodeURIC
 
 // baca data APAR lewat Apps Script (JSONP)
 let jq=0;
-function jsonp(params){return new Promise((res,rej)=>{
-  if(!APAR_SCRIPT_URL)return rej(new Error('APAR_SCRIPT_URL belum diisi di index.html.'));
+function jsonp(params,base=APAR_SCRIPT_URL){return new Promise((res,rej)=>{
+  if(!base)return rej(new Error('URL Apps Script untuk fitur ini belum diisi di index.html (lihat petunjuk di file Code-Hydrant.gs).'));
   const cb='__jp'+(++jq)+'_'+Date.now(),sc=document.createElement('script');
   const done=()=>{clearTimeout(t);delete window[cb];if(sc.remove)sc.remove()};
   const t=setTimeout(()=>{done();rej(new Error('Waktu habis menghubungi Apps Script. Pastikan Code.gs sudah di-deploy versi terbaru.'))},25000);
   window[cb]=x=>{done();res(x)};
   sc.onerror=()=>{done();rej(new Error('Gagal menghubungi Apps Script.'))};
-  sc.src=APAR_SCRIPT_URL+'?'+new URLSearchParams({...params,callback:cb}).toString();
+  sc.src=base+'?'+new URLSearchParams({...params,callback:cb}).toString();
   document.head.appendChild(sc)})}
 async function loadAparMaster(){
   try{const x=await jsonp({action:'aparMaster'});if(!x.ok)throw new Error(x.error||'Gagal memuat master');AM=x.rows;amErr=''}catch(e){amErr=e.message}
@@ -1547,13 +1548,161 @@ async function psSubmit(){
 }
 
 
+// ====================================================================
+//  CHECKSHEET HYDRANT  (Master Data, Hasil Checksheet, QR code, form petugas)
+//  Memakai project Apps Script TERSENDIRI (Code-Hydrant.gs -> HYDRANT_SCRIPT_URL) dan spreadsheet Hydrant sendiri.
+// ====================================================================
+const HITEMS=[['box','Kebersihan Box Hydrant'],['nozzle','Nozzle'],['spray','Variable Spray'],['selang','Selang'],['valve','Valve'],['handle','Handle Valve'],['pilar','Pilar Hydrant'],['coupling','Coupling dan Tutup'],['support','Support Pipa'],['pipa','Pipa']];
+let YM=null,YR=null,ymErr='',yrErr='',yTab='master',ymPlant='',yhPlant='',yYear=String(new Date().getFullYear()),YMV=[],YHV=[],YS=null;
+const hydLink=(k,p)=>baseUrl()+'?hyd='+encodeURIComponent(k)+'&plant='+encodeURIComponent(p);
+async function loadHydMaster(){
+  try{const x=await jsonp({action:'hydMaster'},HYDRANT_SCRIPT_URL);if(!x.ok)throw new Error(x.error||'Gagal memuat master hydrant');YM=x.rows;ymErr=''}catch(e){ymErr=e.message}
+  if(cur==='hydrant'||cur==='home')render()}
+async function loadHydResults(){const y=yYear;
+  try{const x=await jsonp({action:'hydResults',year:y},HYDRANT_SCRIPT_URL);if(!x.ok)throw new Error(x.error||'Gagal memuat hasil hydrant');if(y!==yYear)return;YR=x.rows;yrErr=''}catch(e){if(y===yYear)yrErr=e.message}
+  if(cur==='hydrant')render()}
+function loadHyd(){ymErr=yrErr='';loadHydMaster();loadHydResults()}
+const hydState=()=>ymErr?`<div class="card empty" style="color:var(--r)">${esc(ymErr)}</div>`:yrErr?`<div class="card empty" style="color:var(--r)">${esc(yrErr)}</div>`:'';
+function renderHydrant(){
+  const tab=(k,t)=>`<button class="${yTab===k?'on':''}" onclick="yTab='${k}';render()">${t}</button>`;
+  view.innerHTML=`<div class="tabs">${tab('master','🗂 Master Data')}${tab('hasil','📊 Hasil Checksheet')}</div>`+(yTab==='master'?hydMasterPage():hydResultPage());
+}
+const hydNext=plant=>'HYDRANT'+String(Math.max(0,...(YM||[]).filter(r=>r.plant===plant).map(r=>parseInt((String(r.kode).match(/\d+$/)||[0])[0],10)||0))+1).padStart(3,'0');   // tiap plant mulai dari HYD001
+
+// ---------- Master data ----------
+function hydMasterPage(){
+  let h=`<div class="tools"><div style="min-width:210px"><label class="lb">Plant</label><select onchange="ymPlant=this.value;render()">${plantOpts(ymPlant,true)}</select></div>
+  <button class="p" onclick="hydForm(-1)">+ Tambah Hydrant</button><button class="sm" onclick="hydPrintQR(YMV.map((_,i)=>i))">🖨 Cetak QR (sesuai filter)</button><button class="sm" onclick="loadHyd()">↻ Muat ulang</button></div>`;
+  if(!YM)return h+(hydState()||'<div class="card empty">Memuat master data…</div>');
+  YMV=YM.filter(x=>!ymPlant||x.plant===ymPlant);
+  h+=`<div class="wrap"><table><thead><tr><th>NO</th><th>KODE ALAT</th><th>PLANT</th><th>LOKASI</th><th>QR</th><th>AKSI</th></tr></thead><tbody>`;
+  YMV.forEach((x,i)=>{h+=`<tr><td>${i+1}</td><td><b>${esc(x.kode)}</b></td><td>${esc(x.plant)}</td><td style="white-space:normal">${esc(x.lokasi)}</td><td><button class="sm" onclick="hydShowQR(${i})">QR</button></td><td><button class="sm ed" onclick="hydForm(${i})">Edit</button> <button class="sm dl" onclick="hydDel(${i})">Hapus</button></td></tr>`});
+  h+='</tbody></table>'+(YMV.length?'':'<div class="empty">Belum ada data hydrant</div>')+'</div>';
+  return h+`<div class="l" style="margin-top:8px">Kode alat dibuat otomatis per plant (tiap plant mulai dari HYDRANT001). Data tersimpan di spreadsheet master Hydrant.</div>`+hydState();
+}
+function hydForm(i){
+  const x=i>=0?YMV[i]:null,p0=x?x.plant:(ymPlant||PLANTS[0]);
+  dlgOpen((x?'Edit':'Tambah')+' Hydrant',[x?['Plant','ro']:['Plant','sel',PLANTS],['Kode Alat','ro'],['Lokasi']],
+    [p0,x?x.kode:hydNext(p0)+' (otomatis)',x?x.lokasi:''],
+    async v=>{
+      if(!v[2]){alert('Lokasi wajib diisi.');return false}
+      const d={plant:v[0],lokasi:v[2]};
+      const j=await api(x?{action:'hydUpdate',kode:x.kode,...d}:{action:'hydAdd',...d});if(!j)return false;
+      if(x)Object.assign(x,d);else YM.push({kode:j.kode,...d});
+      toast(x?'Tersimpan ✓':'Tersimpan: '+j.kode+' ('+d.plant+')');loadHydMaster()});
+  if(!x){const sel=fields.querySelector('.fld select'),ro=fields.querySelector('.ro');
+    if(sel&&ro)sel.addEventListener('change',()=>{ro.textContent=hydNext(sel.value)+' (otomatis)'})}
+}
+async function hydDel(i){const x=YMV[i];
+  if(!confirm('Hapus '+x.kode+' ('+x.plant+') dari master data?\nRiwayat checksheet-nya tetap tersimpan di spreadsheet.'))return;
+  const j=await api({action:'hydDelete',plant:x.plant,kode:x.kode});if(!j)return;
+  YM=YM.filter(y=>y!==x);render();loadHydMaster()}
+
+// ---------- QR code ----------
+function hydShowQR(i){const x=YMV[i];
+  dlgInfo('QR Code - '+x.kode,`<div class="qrbox">${qrSvg(hydLink(x.kode,x.plant),240)}<div style="font-weight:700;font-size:18px;margin-top:6px">${esc(x.kode)}</div><div>${esc(x.plant)} · ${esc(x.lokasi)}</div><div class="l" style="word-break:break-all;margin:8px 0">${esc(hydLink(x.kode,x.plant))}</div><button class="p" onclick="hydPrintQR([${i}])">🖨 Cetak QR</button></div>`)}
+function hydPrintQR(idx){
+  const list=idx.map(i=>YMV[i]).filter(Boolean);
+  if(!list.length){alert('Tidak ada hydrant untuk dicetak.');return}
+  const doc=`<!DOCTYPE html><html lang="id"><head><meta charset="utf-8"><title>QR Code Hydrant</title><style>
+@page{size:A4 portrait;margin:8mm}*{box-sizing:border-box}
+body{font-family:Arial,Helvetica,sans-serif;margin:0;padding:6px;color:#000}
+.bar{background:#f1f3f6;border:1px solid #ccd;padding:8px 12px;margin-bottom:10px;font-size:12px}.bar button{font:inherit;padding:6px 14px;margin-right:10px;cursor:pointer}
+@media print{.bar{display:none}body{padding:0}}
+.g{display:grid;grid-template-columns:repeat(3,1fr);gap:4mm}
+.lb{border:1px dashed #666;padding:4mm;text-align:center;break-inside:avoid;page-break-inside:avoid}
+.lb svg{width:42mm;height:42mm;display:block;margin:0 auto}
+.k{font-size:20px;font-weight:700;margin-top:2mm}.p{font-size:12px;font-weight:700}.s{font-size:11px}.h{font-size:10px;color:#444;margin-top:1mm}
+</style></head><body><div class="bar"><button onclick="print()">🖨 Cetak</button><span>${list.length} label QR. Tempel di box hydrant; petugas cukup scan untuk mengisi checksheet.</span></div>
+<div class="g">${list.map(x=>`<div class="lb">${qrSvg(hydLink(x.kode,x.plant),'42mm')}<div class="k">${esc(x.kode)}</div><div class="p">${esc(x.plant)}</div><div class="s">${esc(x.lokasi)}</div><div class="h">Scan untuk Checksheet Hydrant</div></div>`).join('')}</div>
+<script>onload=function(){setTimeout(function(){print()},400)}<\/script></body></html>`;
+  const w=window.open('','_blank');
+  if(!w){alert('Pop-up diblokir browser. Izinkan pop-up untuk situs ini lalu coba lagi.');return}
+  w.document.open();w.document.write(doc);w.document.close();
+}
+
+// ---------- Hasil checksheet ----------
+function hydResultPage(){
+  const cy=new Date().getFullYear(),yrs=[...Array(6)].map((_,i)=>cy-4+i);
+  let h=`<div class="tools"><div style="min-width:210px"><label class="lb">Plant</label><select onchange="yhPlant=this.value;render()">${plantOpts(yhPlant,true)}</select></div>
+  <div style="min-width:120px"><label class="lb">Tahun</label><select onchange="yYear=this.value;YR=null;yrErr='';loadHydResults();render()">${yrs.map(y=>`<option${String(y)===yYear?' selected':''}>${y}</option>`).join('')}</select></div>
+  <button class="sm" onclick="loadHyd()">↻ Muat ulang</button></div>`;
+  if(!YM||!YR)return h+(hydState()||'<div class="card empty">Memuat data checksheet…</div>');
+  const list=YM.filter(x=>!yhPlant||x.plant===yhPlant),idx={};
+  YR.forEach(r=>{idx[r.plant+'|'+r.kode+'|'+r.bulan]=r});
+  const sts=r=>{const v=Object.values(r.items);return v.includes('NG')?'NG':v.includes('OK')?'OK':'NA'};
+  h+=`<div class="wrap"><table class="mx"><thead><tr><th class="l">NO</th><th class="l">KODE ALAT</th><th class="l">PLANT</th><th class="l">LOKASI</th>${BLN.map(b=>`<th>${b.toUpperCase()}</th>`).join('')}</tr></thead><tbody>`;
+  const cnt=Array(12).fill(0);
+  list.forEach((x,i)=>{
+    h+=`<tr><td class="l">${i+1}</td><td class="l"><b>${esc(x.kode)}</b></td><td class="l">${esc(x.plant)}</td><td class="l" style="white-space:normal">${esc(x.lokasi)}</td>`;
+    for(let m=0;m<12;m++){const b=yYear+'-'+String(m+1).padStart(2,'0'),r=idx[x.plant+'|'+x.kode+'|'+b];
+      if(r){cnt[m]++;const s=sts(r);h+=`<td><span class="cell ${MARK[s][1]}" title="${MARK[s][2]} · ${esc(r.tgl)} · ${esc(r.petugas)}" onclick="hydDetail(${i},'${b}')">${MARK[s][0]}</span></td>`}
+      else h+=`<td><span class="cell none">·</span></td>`}
+    h+='</tr>'});
+  if(!list.length)h+=`<tr><td colspan="16" class="empty">Belum ada data hydrant${yhPlant?' untuk '+esc(yhPlant):''}. Tambahkan di tab Master Data.</td></tr>`;
+  else h+=`<tr class="sum"><td class="l" colspan="4"><b>Sudah dicek (dari ${list.length} hydrant)</b></td>${cnt.map(c=>`<td><b>${c}</b></td>`).join('')}</tr>`;
+  YHV=list;
+  h+=`</tbody></table></div><div class="l" style="margin-top:10px;display:flex;gap:16px;flex-wrap:wrap;align-items:center"><span><span class="cell ok" style="cursor:default">✓</span> semua item baik</span><span><span class="cell ng" style="cursor:default">—</span> ada item tidak baik</span><span><span class="cell na" style="cursor:default">○</span> semua item diabaikan</span><span><span class="cell none">·</span> belum dicek</span><span>Klik tanda untuk melihat detail.</span></div>`;
+  return h+hydState();
+}
+function hydDetail(i,bulan){
+  const x=YHV[i],r=YR.find(z=>z.plant===x.plant&&z.kode===x.kode&&z.bulan===bulan);if(!r)return;
+  const [yy,mm]=bulan.split('-');
+  dlgInfo(`Hasil ${esc(x.kode)} · ${BLNF[+mm-1]} ${yy}`,
+   `<div class="l" style="margin:4px 0 10px">${esc(r.plant)} · ${esc(r.lokasi)}</div>`
+   +HITEMS.map(([k,n])=>{const v=MARK[r.items[k]]||['?','na','-'];return `<div class="itm" style="display:flex;justify-content:space-between;align-items:center"><span>${n}</span><span class="mk ${v[1]}">${v[0]} <span class="l">${v[2]}</span></span></div>`}).join('')
+   +`<div class="itm" style="display:flex;justify-content:space-between"><span>Tanggal</span><b>${esc(r.tgl)}</b></div><div class="itm" style="display:flex;justify-content:space-between"><span>Petugas</span><b>${esc(r.petugas)}</b></div><div class="itm"><div class="l">Catatan</div>${esc(r.catatan)||'-'}</div>`);
+}
+
+// ---------- Form petugas (dibuka dari QR: ?hyd=HYDRANT001&plant=...) ----------
+async function startHydPetugas(kode,plant){
+  document.body.classList.add('pet');document.title='Checksheet '+kode;
+  view.innerHTML='<div class="card empty">Memuat data hydrant…</div>';
+  try{const x=await jsonp({action:'hydMaster'},HYDRANT_SCRIPT_URL);if(!x.ok)throw new Error(x.error||'Gagal memuat data');YM=x.rows}
+  catch(e){view.innerHTML=`<div class="card empty" style="color:var(--r)">${esc(e.message)}</div>`;return}
+  const hits=YM.filter(r=>r.kode===kode&&(!plant||r.plant===plant));
+  if(!hits.length){view.innerHTML=`<div class="card empty" style="color:var(--r)">Kode hydrant <b>${esc(kode)}</b>${plant?' di <b>'+esc(plant)+'</b>':''} tidak ditemukan di master data.</div>`;return}
+  if(hits.length>1){
+    view.innerHTML=`<div class="card"><div style="font-size:18px;font-weight:700;margin-bottom:6px">Pilih Plant</div><div class="l" style="margin-bottom:10px">Kode ${esc(kode)} ada di beberapa plant.</div>${hits.map(h=>`<a class="btnl p" style="display:block;margin:6px 0;padding:12px;font-size:15px" href="?hyd=${encodeURIComponent(kode)}&plant=${encodeURIComponent(h.plant)}">${esc(h.plant)} · ${esc(h.lokasi)}</a>`).join('')}</div>`;return}
+  let nm='';try{nm=localStorage.getItem('mi_petugas')||''}catch(e){}
+  YS={a:hits[0],items:{},tgl:today,petugas:nm,catatan:''};renderHydPetugas();
+}
+function renderHydPetugas(){
+  const a=YS.a,btn=(k,v,t)=>`<button type="button" data-v="${v}" class="${YS.items[k]===v?'on':''}" onclick="hsSet('${k}','${v}')">${t}</button>`;
+  view.innerHTML=`<div class="card" style="margin-bottom:12px"><div style="font-size:19px;font-weight:700">Checksheet Hydrant</div><div class="l">Pemeriksaan bulanan</div>
+  <div style="display:grid;grid-template-columns:90px 1fr;gap:6px 10px;margin-top:12px"><span class="l">Plant</span><b>${esc(a.plant)}</b><span class="l">Kode Alat</span><b>${esc(a.kode)}</b><span class="l">Lokasi</span><b>${esc(a.lokasi)}</b></div></div>
+  <div class="card">${HITEMS.map(([k,n])=>`<div class="itm" data-k="${k}"><div class="nm">${n}</div><div class="ck3">${btn(k,'OK','✓')}${btn(k,'NG','—')}${btn(k,'NA','○ Abaikan')}</div></div>`).join('')}
+  <div class="itm"><div class="nm">Tanggal Pemeriksaan</div><input type="date" value="${esc(YS.tgl)}" onchange="YS.tgl=this.value"></div>
+  <div class="itm"><div class="nm">Nama Petugas</div><input value="${esc(YS.petugas)}" placeholder="Nama petugas" oninput="YS.petugas=this.value"></div>
+  <div class="itm"><div class="nm">Catatan</div><textarea oninput="YS.catatan=this.value">${esc(YS.catatan)}</textarea></div>
+  <div id="yserr" style="color:var(--r);margin:10px 0;font-weight:600"></div><button class="p" id="ysbtn" style="width:100%;padding:14px;font-size:16px" onclick="hsSubmit()">Kirim Checksheet</button></div>
+  <div class="l" style="margin-top:10px;text-align:center">✓ hijau = baik · — merah = tidak baik · ○ abu-abu = diabaikan</div>`;
+}
+function hsSet(k,v){YS.items[k]=v;document.querySelectorAll('.itm[data-k="'+k+'"] button').forEach(b=>b.classList.toggle('on',b.dataset.v===v))}
+async function hsSubmit(){
+  const a=YS.a,e=m=>{document.getElementById('yserr').textContent=m};e('');
+  const miss=HITEMS.filter(([k])=>!YS.items[k]);
+  if(miss.length)return e('Pilih ✓, — atau ○ untuk semua item. Belum dipilih: '+miss.map(x=>x[1]).join(', ')+'.');
+  if(!YS.tgl)return e('Tanggal pemeriksaan wajib diisi.');
+  if(!YS.petugas.trim())return e('Nama petugas wajib diisi.');
+  const b=document.getElementById('ysbtn');b.disabled=true;b.textContent='Mengirim…';
+  try{
+    const res=await fetch(HYDRANT_SCRIPT_URL,{method:'POST',mode:'cors',redirect:'follow',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'hydSubmit',kode:a.kode,plant:a.plant,tanggal:YS.tgl,petugas:YS.petugas.trim(),items:YS.items,catatan:YS.catatan})});
+    const j=await res.json();if(!j.ok)throw new Error(j.error||'Gagal menyimpan');
+    try{localStorage.setItem('mi_petugas',YS.petugas.trim())}catch(x){}
+    const [yy,mm]=j.bulan.split('-');
+    view.innerHTML=`<div class="card" style="text-align:center;padding:30px 16px"><div style="font-size:54px;color:#16a34a">✓</div><div style="font-size:19px;font-weight:700;margin:6px 0">Checksheet tersimpan</div><div>${esc(a.kode)} · ${esc(a.plant)}</div><div class="l" style="margin:6px 0 16px">Bulan ${BLNF[+mm-1]} ${yy}${j.updated?' (menggantikan isian sebelumnya di bulan yang sama)':''}</div><button class="p" onclick="location.reload()">Isi lagi</button></div>`;
+  }catch(x){b.disabled=false;b.textContent='Kirim Checksheet';e('Gagal mengirim: '+x.message+(x instanceof TypeError?' (periksa koneksi internet)':''))}
+}
+
 // klik di mana saja pada kolom tanggal langsung membuka kalender
 addEventListener('click',e=>{const t=e.target;if(t&&t.matches&&t.matches('input[type=date]')){try{t.showPicker()}catch(_){}}});
 const h0=location.hash.slice(1);
 if(ALL[h0]){cur=h0;if(ALL[h0].parent)subOpen[ALL[h0].parent]=true}
 const qs=new URLSearchParams(location.search),cekQ=qs.get('cek');
-if(cekQ)startPetugas(cekQ,qs.get('plant')||'');
-else{nav();render();loadSheet();loadZones();loadInfo();loadPlants();loadAparMaster();if(cur==='apar')loadAparResults()}
+if(qs.get('hyd'))startHydPetugas(qs.get('hyd'),qs.get('plant')||'');
+else if(cekQ)startPetugas(cekQ,qs.get('plant')||'');
+else{nav();render();loadSheet();loadZones();loadInfo();loadPlants();loadAparMaster();loadHydMaster();if(cur==='apar')loadAparResults();if(cur==='hydrant')loadHydResults()}
 </script>
 </body>
 </html>
