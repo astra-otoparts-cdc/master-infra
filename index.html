@@ -93,6 +93,7 @@ dialog{max-height:94vh;overflow:auto}dialog.wide{width:min(940px,96vw)}
 .mx{min-width:1120px}.mx th,.mx td{text-align:center;padding:8px 4px}.mx th.l,.mx td.l{text-align:left}.mx tr.sum td{background:var(--bg)}
 .cell{display:inline-block;width:26px;height:26px;line-height:26px;border-radius:50%;font-weight:700;font-size:14px;cursor:pointer;color:#fff;text-align:center}
 .cell.ok{background:#16a34a}.cell.ng{background:#dc2626}.cell.na{background:#9ca3af}.cell.none{background:transparent;color:var(--mut);border:1px dashed var(--line);cursor:default}
+.tx{display:inline-block;min-width:26px;height:26px;line-height:24px;border-radius:50%;font-size:13px;text-align:center;margin:1px;border:1px solid}.tx.refill{background:#dbeafe;border-color:#3b82f6}.tx.buy{background:#fef3c7;border-color:#f59e0b}
 .mk{font-weight:700}.mk.ok{color:#16a34a}.mk.ng{color:#dc2626}.mk.na{color:#9ca3af}
 .itm{padding:9px 0;border-bottom:1px solid var(--line)}.itm .nm{font-weight:600;margin-bottom:6px}
 .ck3{display:flex;gap:6px}.ck3 button{flex:1;padding:11px 0;font-weight:700;font-size:15px;border-radius:10px}
@@ -401,7 +402,7 @@ const BLN=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','De
 const BLNF=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
 const MARK={OK:['✓','ok','Baik'],NG:['—','ng','Tidak baik'],NA:['○','na','Diabaikan']};
 let PLANTS=['CDC Plant 1','CDC Plant 2','RDC Semarang','RDC Sidoarjo','RDC Bandung','DC Serang','DC Purwokerto','DC Jember','DC Denpasar','DC Manado','DC Makassar','DC Bonjer'];
-let AM=null,AR=null,amErr='',arErr='',aTab='hasil',aPlant='',aYear=String(new Date().getFullYear()),mPlant='',MV=[],PS=null;
+let AM=null,AR=null,amErr='',arErr='',aTab='master',aPlant='',aYear=String(new Date().getFullYear()),mPlant='',MV=[],PS=null;
 
 /* QR encoder: QRCode for JavaScript, (c) 2009 Kazuhiko Arase, MIT License. "QR Code" is a registered trademark of DENSO WAVE INCORPORATED. */
 const QR=(function(){const defs={},cache={};
@@ -1341,14 +1342,14 @@ async function loadAparMaster(){
 async function loadAparResults(){const y=aYear;
   try{const x=await jsonp({action:'aparResults',year:y});if(!x.ok)throw new Error(x.error||'Gagal memuat hasil');if(y!==aYear)return;AR=x.rows;arErr=''}catch(e){if(y===aYear)arErr=e.message}
   if(cur==='apar')render()}
-function loadApar(){amErr=arErr='';loadAparMaster();loadAparResults()}
+function loadApar(){amErr=arErr='';loadAparMaster();loadAparResults();loadHist()}
 function loadPlants(){gviz(PLANT_ID,'headers=0').then(x=>{if(x.status!=='ok')return;
   const z=x.table.rows.map(w=>w.c[0]&&w.c[0].v!=null?String(w.c[0].v).trim():'').filter(Boolean);
   if(z.length){PLANTS=z;if(cur==='apar')render()}}).catch(()=>{})}
 
 function renderApar(){
   const tab=(k,t)=>`<button class="${aTab===k?'on':''}" onclick="aTab='${k}';render()">${t}</button>`;
-  view.innerHTML=`<div class="tabs">${tab('hasil','📊 Hasil Checksheet')}${tab('master','🗂 Master Data')}</div>`+(aTab==='hasil'?hasilPage():masterPage());
+  view.innerHTML=`<div class="tabs">${tab('master','🗂 Master Data')}${tab('hist','🔄 Histori Pengisian & Pembelian')}${tab('hasil','📊 Hasil Checksheet')}</div>`+(aTab==='hasil'?hasilPage():aTab==='master'?masterPage():histPage());
 }
 const plantOpts=(sel,all)=>(all?`<option value="">Semua Plant</option>`:'')+PLANTS.map(p=>`<option${p===sel?' selected':''}>${esc(p)}</option>`).join('');
 const stateBox=()=>amErr?`<div class="card empty" style="color:var(--r)">${esc(amErr)}</div>`:arErr?`<div class="card empty" style="color:var(--r)">${esc(arErr)}</div>`:'';
@@ -1402,7 +1403,7 @@ function masterPage(){
   if(!AM)return h+(stateBox()||'<div class="card empty">Memuat master data…</div>');
   MV=AM.filter(x=>!mPlant||x.plant===mPlant);
   h+=`<div class="wrap"><table><thead><tr><th>NO</th><th>KODE ALAT</th><th>PLANT</th><th>JENIS</th><th>KAPASITAS (KG)</th><th>LOKASI</th><th>TANGGAL EXPIRED</th><th>QR</th><th>AKSI</th></tr></thead><tbody>`;
-  MV.forEach((x,i)=>{h+=`<tr><td>${i+1}</td><td><b>${esc(x.kode)}</b></td><td>${esc(x.plant)}</td><td>${esc(x.jenis)}</td><td>${esc(x.kap)}</td><td style="white-space:normal">${esc(x.lokasi)}</td><td>${expBadge(x)}</td><td><button class="sm" onclick="showQR(${i})">QR</button></td><td><button class="sm ed" onclick="masterForm(${i})">Edit</button> <button class="sm dl" onclick="masterDel(${i})">Hapus</button></td></tr>`});
+  MV.forEach((x,i)=>{h+=`<tr><td>${i+1}</td><td><b>${esc(x.kode)}</b></td><td>${esc(x.plant)}</td><td>${esc(x.jenis)}</td><td>${esc(x.kap)}</td><td style="white-space:normal">${esc(x.lokasi)}</td><td>${expBadge(x)}</td><td><button class="sm" onclick="showQR(${i})">QR</button> <button class="sm" onclick="aTab='hist';histForm('${esc(x.plant)}|${esc(x.kode)}');render()">Transaksi</button></td><td><button class="sm ed" onclick="masterForm(${i})">Edit</button> <button class="sm dl" onclick="masterDel(${i})">Hapus</button></td></tr>`});
   h+='</tbody></table>'+(MV.length?'':'<div class="empty">Belum ada data APAR</div>')+'</div>';
   return h+`<div class="l" style="margin-top:8px">Kode alat dibuat otomatis per plant (tiap plant mulai dari APAR001). Data tersimpan di spreadsheet master APAR.</div>`+stateBox();
 }
@@ -1422,6 +1423,53 @@ function masterForm(i){
   if(!x){const sel=fields.querySelector('.fld select'),ro=fields.querySelector('.ro');
     if(sel&&ro)sel.addEventListener('change',()=>{ro.textContent=nextKode(sel.value)+' (otomatis)'})}
 }
+// ---------- Histori APAR: pengisian ulang & pembelian baru (per bulan, setahun) ----------
+let AH=null,hhErr='',hPlant='',hYear=String(new Date().getFullYear()),HM=[];
+const TJ={Pengisian:['🔄','refill','Pengisian ulang'],Pembelian:['🛒','buy','Pembelian baru']};
+async function loadHist(){try{const x=await jsonp({action:'aparHist'});if(!x.ok)throw new Error(x.error||'Gagal memuat histori');AH=x.rows;hhErr=''}catch(e){hhErr=e.message}if(cur==='apar')render()}
+function histPage(){
+  const cy=new Date().getFullYear(),ys=new Set([cy-3,cy-2,cy-1,cy,cy+1,+hYear]),yrs=[...ys].sort();
+  let h=`<div class="tools"><div style="min-width:210px"><label class="lb">Plant</label><select onchange="hPlant=this.value;render()">${plantOpts(hPlant,true)}</select></div>
+  <div style="min-width:120px"><label class="lb">Tahun</label><select onchange="hYear=this.value;render()">${yrs.map(y=>`<option${String(y)===hYear?' selected':''}>${y}</option>`).join('')}</select></div>
+  <button class="p" onclick="histForm('')">+ Catat Transaksi</button><button class="sm" onclick="loadHist()">↻ Muat ulang</button></div>`;
+  if(!AM||!AH)return h+(hhErr?`<div class="card empty" style="color:var(--r)">${esc(hhErr)}</div>`:amErr?`<div class="card empty" style="color:var(--r)">${esc(amErr)}</div>`:'<div class="card empty">Memuat histori…</div>');
+  const idx={};AH.forEach(t=>{(idx[t.plant+'|'+t.kode+'|'+String(t.tgl).slice(0,7)]=idx[t.plant+'|'+t.kode+'|'+String(t.tgl).slice(0,7)]||[]).push(t)});
+  const rows=AM.filter(x=>!hPlant||x.plant===hPlant).map(x=>({...x}));
+  AH.forEach(t=>{if((!hPlant||t.plant===hPlant)&&String(t.tgl).startsWith(hYear)&&!rows.some(x=>x.plant===t.plant&&x.kode===t.kode))rows.push({plant:t.plant,kode:t.kode,jenis:'(tidak ada di master)',kap:'',lokasi:''})});   // transaksi untuk alat yang sudah dihapus dari master
+  HM=rows;const cnt={Pengisian:Array(12).fill(0),Pembelian:Array(12).fill(0)};
+  h+=`<div class="wrap"><table class="mx"><thead><tr><th class="l">NO</th><th class="l">KODE ALAT</th><th class="l">PLANT</th><th class="l">JENIS</th><th class="l">LOKASI</th>${BLN.map(b=>`<th>${b.toUpperCase()}</th>`).join('')}</tr></thead><tbody>`;
+  rows.forEach((x,i)=>{
+    h+=`<tr><td class="l">${i+1}</td><td class="l"><b>${esc(x.kode)}</b></td><td class="l">${esc(x.plant)}</td><td class="l">${esc(x.jenis)}${x.kap?' '+esc(x.kap)+' kg':''}</td><td class="l" style="white-space:normal">${esc(x.lokasi)}</td>`;
+    for(let m=0;m<12;m++){const b=hYear+'-'+String(m+1).padStart(2,'0'),a=idx[x.plant+'|'+x.kode+'|'+b]||[];
+      if(a.length){a.forEach(t=>{if(cnt[t.jenis])cnt[t.jenis][m]++});h+=`<td style="cursor:pointer" onclick="histDetail(${i},'${b}')">${a.map(t=>`<span class="tx ${(TJ[t.jenis]||['','x'])[1]}" title="${esc(fmtD(t.tgl))} · ${esc((TJ[t.jenis]||[0,0,t.jenis])[2])}">${(TJ[t.jenis]||['•'])[0]}</span>`).join('')}</td>`}
+      else h+=`<td><span class="cell none">·</span></td>`}
+    h+='</tr>'});
+  if(!rows.length)h+=`<tr><td colspan="17" class="empty">Belum ada data APAR${hPlant?' untuk '+esc(hPlant):''}.</td></tr>`;
+  else h+=`<tr class="sum"><td class="l" colspan="5"><b>🔄 Pengisian ulang</b></td>${cnt.Pengisian.map(c=>`<td><b>${c||'·'}</b></td>`).join('')}</tr><tr class="sum"><td class="l" colspan="5"><b>🛒 Pembelian baru</b></td>${cnt.Pembelian.map(c=>`<td><b>${c||'·'}</b></td>`).join('')}</tr>`;
+  h+=`</tbody></table></div><div class="l" style="margin-top:10px;display:flex;gap:16px;flex-wrap:wrap;align-items:center"><span><span class="tx refill">🔄</span> pengisian ulang</span><span><span class="tx buy">🛒</span> pembelian baru</span><span><span class="cell none">·</span> tidak ada transaksi</span><span>Klik tanda untuk melihat tanggal, mengubah, atau menghapus.</span></div>`;
+  return h;
+}
+function histDetail(i,b){
+  const x=HM[i],[yy,mm]=b.split('-'),list=AH.filter(t=>t.plant===x.plant&&t.kode===x.kode&&String(t.tgl).slice(0,7)===b).sort((a,c)=>String(a.tgl).localeCompare(String(c.tgl)));
+  dlgInfo(`${x.kode} · ${x.plant} · ${BLNF[+mm-1]} ${yy}`,list.map(t=>`<div class="itm" style="display:flex;justify-content:space-between;align-items:center;gap:8px"><div><b>${(TJ[t.jenis]||['•'])[0]} ${esc((TJ[t.jenis]||[0,0,t.jenis])[2])}</b><div class="l">${esc(fmtD(t.tgl))}${t.ket?' · '+esc(t.ket):''}</div></div><div style="white-space:nowrap"><button class="sm ed" onclick="dlg.close();histForm('${esc(t.id)}')">Edit</button> <button class="sm dl" onclick="histDel('${esc(t.id)}')">Hapus</button></div></div>`).join('')||'<div class="l">Tidak ada transaksi.</div>');
+}
+function histForm(arg){
+  if(!AM||!AM.length){alert('Belum ada APAR di Master Data.');return}
+  const x=arg&&!arg.includes('|')?AH.find(t=>t.id===arg):null,pre=!x&&arg?arg.split('|'):null;
+  const plants=[...new Set(AM.map(a=>a.plant))],kodes=p=>AM.filter(a=>a.plant===p).map(a=>a.kode);
+  const p0=x?x.plant:pre?pre[0]:(hPlant&&plants.includes(hPlant)?hPlant:plants[0]);
+  dlgOpen((x?'Edit':'Catat')+' Transaksi APAR',[['Jenis Transaksi','sel',['Pengisian','Pembelian']],x?['Plant','ro']:['Plant','sel',plants],x?['Kode Alat','ro']:['Kode Alat','sel',kodes(p0)],['Tanggal Transaksi','date'],['Keterangan (opsional)']],
+    [x?x.jenis:(pre&&pre[2])||'Pengisian',p0,x?x.kode:(pre?pre[1]:kodes(p0)[0]),x?x.tgl:today,x?x.ket:''],
+    async v=>{
+      if(!v[3]){alert('Tanggal transaksi wajib diisi.');return false}
+      const d={jenis:v[0],plant:v[1],kode:v[2],tgl:v[3],ket:v[4]};
+      const j=await api(x?{action:'aparHistUpdate',id:x.id,...d}:{action:'aparHistAdd',...d});if(!j)return false;
+      hYear=String(d.tgl).slice(0,4);toast('Tersimpan ✓');loadHist()});
+  if(!x){const sels=fields.querySelectorAll('.fld select');
+    if(sels.length>2)sels[1].addEventListener('change',()=>{sels[2].innerHTML=kodes(sels[1].value).map(k=>`<option value="${esc(k)}">${esc(k)}</option>`).join('')})}
+}
+async function histDel(id){const t=AH.find(z=>z.id===id);if(!t||!confirm('Hapus transaksi '+(TJ[t.jenis]||[0,0,t.jenis])[2]+' '+t.kode+' ('+t.plant+') tanggal '+fmtD(t.tgl)+'?'))return;
+  const j=await api({action:'aparHistDelete',id});if(!j)return;AH=AH.filter(z=>z.id!==id);dlg.close();render();loadHist()}
 async function masterDel(i){const x=MV[i];
   if(!confirm('Hapus '+x.kode+' ('+x.plant+') dari master data?\nRiwayat checksheet-nya tetap tersimpan di spreadsheet.'))return;
   const j=await api({action:'aparDelete',plant:x.plant,kode:x.kode});if(!j)return;
