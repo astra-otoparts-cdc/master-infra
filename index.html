@@ -90,7 +90,7 @@ dialog{max-height:94vh;overflow:auto}dialog.wide{width:min(940px,96vw)}
 .sm.ed{background:var(--pri);border-color:var(--pri);color:#fff}.sm.dl{background:var(--r);border-color:var(--r);color:#fff}
 @media (max-width:820px){.dwrap{flex-direction:column}#dleg{border-left:0;border-top:1px solid var(--line);padding:14px 0 0}}
 .tabs{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}.tabs button{border-radius:99px;padding:8px 18px}.tabs button.on{background:var(--pri);border-color:var(--pri);color:#fff}
-.mx{min-width:980px}.mx th,.mx td{text-align:center;padding:8px 4px}.mx th.l,.mx td.l{text-align:left}.mx tr.sum td{background:var(--bg)}
+.mx{min-width:1120px}.mx th,.mx td{text-align:center;padding:8px 4px}.mx th.l,.mx td.l{text-align:left}.mx tr.sum td{background:var(--bg)}
 .cell{display:inline-block;width:26px;height:26px;line-height:26px;border-radius:50%;font-weight:700;font-size:14px;cursor:pointer;color:#fff;text-align:center}
 .cell.ok{background:#16a34a}.cell.ng{background:#dc2626}.cell.na{background:#9ca3af}.cell.none{background:transparent;color:var(--mut);border:1px dashed var(--line);cursor:default}
 .mk{font-weight:700}.mk.ok{color:#16a34a}.mk.ng{color:#dc2626}.mk.na{color:#9ca3af}
@@ -236,7 +236,7 @@ function render(){
     let h='';
     for(const g of GRP){h+=`<h3>${ICON[g]} ${g}</h3><div class="cards" style="margin-bottom:20px">`;
       for(const k in ALL)if(ALL[k].g===g){
-        const isL=k==='leader',n=isL?(SH?SH.length:'…'):k==='apar'?(AM?AM.length:'…'):D[k].length,al=isL?(SH?SH.filter(r=>r.risk==='A').length:0):k==='apar'?0:D[k].filter(r=>cls(r[r.length-1])==='bad').length;
+        const isL=k==='leader',n=isL?(SH?SH.length:'…'):k==='apar'?(AM?AM.length:'…'):D[k].length,al=isL?(SH?SH.filter(r=>r.risk==='A').length:0):k==='apar'?(AM?AM.filter(r=>expState(r)==='bad').length:0):D[k].filter(r=>cls(r[r.length-1])==='bad').length;
         h+=`<div class="card k" onclick="go('${k}')"><div class="n">${n}</div><div class="l">${isL?'Temuan Safety Patrol (Leader)':ALL[k].t}</div><div class="l" style="color:var(--r);margin-top:4px">${al?al+(isL?' risiko rank A':' perlu perhatian'):'&nbsp;'}</div></div>`}
       h+='</div>'}
     view.innerHTML=h;return}
@@ -1363,16 +1363,16 @@ function hasilPage(){
   const list=AM.filter(x=>!aPlant||x.plant===aPlant),idx={};
   AR.forEach(r=>{idx[r.plant+'|'+r.kode+'|'+r.bulan]=r});
   const sts=r=>{const v=Object.values(r.items);return v.includes('NG')?'NG':v.includes('OK')?'OK':'NA'};
-  h+=`<div class="wrap"><table class="mx"><thead><tr><th class="l">NO</th><th class="l">KODE ALAT</th><th class="l">PLANT</th><th class="l">JENIS</th><th class="l">LOKASI</th>${BLN.map(b=>`<th>${b.toUpperCase()}</th>`).join('')}</tr></thead><tbody>`;
+  h+=`<div class="wrap"><table class="mx"><thead><tr><th class="l">NO</th><th class="l">KODE ALAT</th><th class="l">PLANT</th><th class="l">JENIS</th><th class="l">LOKASI</th><th class="l">EXPIRED</th>${BLN.map(b=>`<th>${b.toUpperCase()}</th>`).join('')}</tr></thead><tbody>`;
   const cnt=Array(12).fill(0);
   list.forEach((x,i)=>{
-    h+=`<tr><td class="l">${i+1}</td><td class="l"><b>${esc(x.kode)}</b></td><td class="l">${esc(x.plant)}</td><td class="l">${esc(x.jenis)} ${esc(x.kap)} kg</td><td class="l" style="white-space:normal">${esc(x.lokasi)}</td>`;
+    h+=`<tr><td class="l">${i+1}</td><td class="l"><b>${esc(x.kode)}</b></td><td class="l">${esc(x.plant)}</td><td class="l">${esc(x.jenis)} ${esc(x.kap)} kg</td><td class="l" style="white-space:normal">${esc(x.lokasi)}</td><td class="l">${expBadge(x)}</td>`;
     for(let m=0;m<12;m++){const b=aYear+'-'+String(m+1).padStart(2,'0'),r=idx[x.plant+'|'+x.kode+'|'+b];
       if(r){cnt[m]++;const s=sts(r);h+=`<td><span class="cell ${MARK[s][1]}" title="${MARK[s][2]} · ${esc(r.tgl)} · ${esc(r.petugas)}" onclick="aparDetail(${i},'${b}')">${MARK[s][0]}</span></td>`}
       else h+=`<td><span class="cell none">·</span></td>`}
     h+='</tr>'});
-  if(!list.length)h+=`<tr><td colspan="17" class="empty">Belum ada data APAR${aPlant?' untuk '+esc(aPlant):''}. Tambahkan di tab Master Data.</td></tr>`;
-  else h+=`<tr class="sum"><td class="l" colspan="5"><b>Sudah dicek (dari ${list.length} alat)</b></td>${cnt.map(c=>`<td><b>${c}</b></td>`).join('')}</tr>`;
+  if(!list.length)h+=`<tr><td colspan="18" class="empty">Belum ada data APAR${aPlant?' untuk '+esc(aPlant):''}. Tambahkan di tab Master Data.</td></tr>`;
+  else h+=`<tr class="sum"><td class="l" colspan="6"><b>Sudah dicek (dari ${list.length} alat)</b></td>${cnt.map(c=>`<td><b>${c}</b></td>`).join('')}</tr>`;
   HV=list;
   h+=`</tbody></table></div><div class="l" style="margin-top:10px;display:flex;gap:16px;flex-wrap:wrap;align-items:center"><span><span class="cell ok" style="cursor:default">✓</span> semua item baik</span><span><span class="cell ng" style="cursor:default">—</span> ada item tidak baik</span><span><span class="cell na" style="cursor:default">○</span> semua item diabaikan</span><span><span class="cell none">·</span> belum dicek</span><span>Klik tanda untuk melihat detail.</span></div>`;
   return h+stateBox();
@@ -1390,26 +1390,32 @@ function aparDetail(i,bulan){
 function dlgInfo(ttl,html){onSave=null;dt.textContent=ttl.replace(/&amp;/g,'&');fields.innerHTML=html;dlg.classList.remove('wide');dleg.hidden=true;sbtn.hidden=true;cbtn.textContent='Tutup';dlg.showModal()}
 
 // ---------- Master data ----------
+const expIso=x=>isoDate({v:x.exp||''});
+const fmtD=iso=>iso?new Date(iso+'T00:00:00').toLocaleDateString('id-ID',{day:'numeric',month:'short',year:'numeric'}):'-';
+const expDays=x=>{const i=expIso(x);return i?Math.round((new Date(i+'T00:00:00')-new Date(today+'T00:00:00'))/864e5):null};
+const expState=x=>{const d=expDays(x);return d===null?'':d<0?'bad':d<=30?'warn':'good'};   // merah = expired, kuning = <= 30 hari
+const expBadge=x=>{const i=expIso(x);if(!i)return '<span class="l">-</span>';const d=expDays(x);return `<span class="b ${expState(x)}">${fmtD(i)}${d<0?' · Expired':d<=30?' · '+d+' hari':''}</span>`};
 const nextKode=plant=>'APAR'+String(Math.max(0,...(AM||[]).filter(r=>r.plant===plant).map(r=>parseInt((String(r.kode).match(/\d+$/)||[0])[0],10)||0))+1).padStart(3,'0');   // tiap plant mulai dari APAR001
 function masterPage(){
   let h=`<div class="tools"><div style="min-width:210px"><label class="lb">Plant</label><select onchange="mPlant=this.value;render()">${plantOpts(mPlant,true)}</select></div>
   <button class="p" onclick="masterForm(-1)">+ Tambah APAR</button><button class="sm" onclick="printQR(MV.map((_,i)=>i))">🖨 Cetak QR (sesuai filter)</button><button class="sm" onclick="loadApar()">↻ Muat ulang</button></div>`;
   if(!AM)return h+(stateBox()||'<div class="card empty">Memuat master data…</div>');
   MV=AM.filter(x=>!mPlant||x.plant===mPlant);
-  h+=`<div class="wrap"><table><thead><tr><th>NO</th><th>KODE ALAT</th><th>PLANT</th><th>JENIS</th><th>KAPASITAS (KG)</th><th>LOKASI</th><th>QR</th><th>AKSI</th></tr></thead><tbody>`;
-  MV.forEach((x,i)=>{h+=`<tr><td>${i+1}</td><td><b>${esc(x.kode)}</b></td><td>${esc(x.plant)}</td><td>${esc(x.jenis)}</td><td>${esc(x.kap)}</td><td style="white-space:normal">${esc(x.lokasi)}</td><td><button class="sm" onclick="showQR(${i})">QR</button></td><td><button class="sm ed" onclick="masterForm(${i})">Edit</button> <button class="sm dl" onclick="masterDel(${i})">Hapus</button></td></tr>`});
+  h+=`<div class="wrap"><table><thead><tr><th>NO</th><th>KODE ALAT</th><th>PLANT</th><th>JENIS</th><th>KAPASITAS (KG)</th><th>LOKASI</th><th>TANGGAL EXPIRED</th><th>QR</th><th>AKSI</th></tr></thead><tbody>`;
+  MV.forEach((x,i)=>{h+=`<tr><td>${i+1}</td><td><b>${esc(x.kode)}</b></td><td>${esc(x.plant)}</td><td>${esc(x.jenis)}</td><td>${esc(x.kap)}</td><td style="white-space:normal">${esc(x.lokasi)}</td><td>${expBadge(x)}</td><td><button class="sm" onclick="showQR(${i})">QR</button></td><td><button class="sm ed" onclick="masterForm(${i})">Edit</button> <button class="sm dl" onclick="masterDel(${i})">Hapus</button></td></tr>`});
   h+='</tbody></table>'+(MV.length?'':'<div class="empty">Belum ada data APAR</div>')+'</div>';
   return h+`<div class="l" style="margin-top:8px">Kode alat dibuat otomatis per plant (tiap plant mulai dari APAR001). Data tersimpan di spreadsheet master APAR.</div>`+stateBox();
 }
 function masterForm(i){
   const x=i>=0?MV[i]:null,p0=x?x.plant:(mPlant||PLANTS[0]);
-  dlgOpen((x?'Edit':'Tambah')+' APAR',[x?['Plant','ro']:['Plant','sel',PLANTS],['Kode Alat','ro'],['Jenis','sel',JENIS],['Kapasitas (kg)','number'],['Lokasi']],
-    [p0,x?x.kode:nextKode(p0)+' (otomatis)',x?x.jenis:JENIS[0],x?x.kap:'',x?x.lokasi:''],
+  dlgOpen((x?'Edit':'Tambah')+' APAR',[x?['Plant','ro']:['Plant','sel',PLANTS],['Kode Alat','ro'],['Jenis','sel',JENIS],['Kapasitas (kg)','number'],['Lokasi'],['Tanggal Expired','date']],
+    [p0,x?x.kode:nextKode(p0)+' (otomatis)',x?x.jenis:JENIS[0],x?x.kap:'',x?x.lokasi:'',x?expIso(x):''],
     async v=>{
       const kap=parseFloat(v[3]);
       if(!(kap>0)){alert('Kapasitas (kg) harus berupa angka lebih dari 0.');return false}
       if(!v[4]){alert('Lokasi wajib diisi.');return false}
-      const d={plant:v[0],jenis:v[2],kap:String(kap),lokasi:v[4]};
+      if(!v[5]){alert('Tanggal expired wajib diisi.');return false}
+      const d={plant:v[0],jenis:v[2],kap:String(kap),lokasi:v[4],exp:v[5]};
       const j=await api(x?{action:'aparUpdate',kode:x.kode,...d}:{action:'aparAdd',...d});if(!j)return false;
       if(x)Object.assign(x,d);else AM.push({kode:j.kode,...d});
       toast(x?'Tersimpan ✓':'Tersimpan: '+j.kode+' ('+d.plant+')');loadAparMaster()});
@@ -1437,7 +1443,7 @@ body{font-family:Arial,Helvetica,sans-serif;margin:0;padding:6px;color:#000}
 .lb svg{width:42mm;height:42mm;display:block;margin:0 auto}
 .k{font-size:20px;font-weight:700;margin-top:2mm}.p{font-size:12px;font-weight:700}.s{font-size:11px}.h{font-size:10px;color:#444;margin-top:1mm}
 </style></head><body><div class="bar"><button onclick="print()">🖨 Cetak</button><span>${list.length} label QR. Tempel di tabung APAR; petugas cukup scan untuk mengisi checksheet.</span></div>
-<div class="g">${list.map(x=>`<div class="lb">${qrSvg(qrLink(x.kode,x.plant),'42mm')}<div class="k">${esc(x.kode)}</div><div class="p">${esc(x.plant)}</div><div class="s">${esc(x.lokasi)}</div><div class="s">${esc(x.jenis)} · ${esc(x.kap)} kg</div><div class="h">Scan untuk Checksheet APAR</div></div>`).join('')}</div>
+<div class="g">${list.map(x=>`<div class="lb">${qrSvg(qrLink(x.kode,x.plant),'42mm')}<div class="k">${esc(x.kode)}</div><div class="p">${esc(x.plant)}</div><div class="s">${esc(x.lokasi)}</div><div class="s">${esc(x.jenis)} · ${esc(x.kap)} kg</div><div class="s">Exp: ${esc(fmtD(expIso(x)))}</div><div class="h">Scan untuk Checksheet APAR</div></div>`).join('')}</div>
 <script>onload=function(){setTimeout(function(){print()},400)}<\/script></body></html>`;
   const w=window.open('','_blank');
   if(!w){alert('Pop-up diblokir browser. Izinkan pop-up untuk situs ini lalu coba lagi.');return}
@@ -1461,7 +1467,7 @@ async function startPetugas(kode,plant){
 function renderPetugas(){
   const a=PS.a,btn=(k,v,t)=>`<button type="button" data-v="${v}" class="${PS.items[k]===v?'on':''}" onclick="psSet('${k}','${v}')">${t}</button>`;
   view.innerHTML=`<div class="card" style="margin-bottom:12px"><div style="font-size:19px;font-weight:700">Checksheet APAR</div><div class="l">Pemeriksaan bulanan</div>
-  <div style="display:grid;grid-template-columns:90px 1fr;gap:6px 10px;margin-top:12px"><span class="l">Plant</span><b>${esc(a.plant)}</b><span class="l">Kode Alat</span><b>${esc(a.kode)}</b><span class="l">Lokasi</span><b>${esc(a.lokasi)}</b><span class="l">Jenis</span><b>${esc(a.jenis)} · ${esc(a.kap)} kg</b></div></div>
+  <div style="display:grid;grid-template-columns:90px 1fr;gap:6px 10px;margin-top:12px"><span class="l">Plant</span><b>${esc(a.plant)}</b><span class="l">Kode Alat</span><b>${esc(a.kode)}</b><span class="l">Lokasi</span><b>${esc(a.lokasi)}</b><span class="l">Jenis</span><b>${esc(a.jenis)} · ${esc(a.kap)} kg</b><span class="l">Expired</span><b>${expBadge(a)}</b></div></div>
   <div class="card">${AITEMS.map(([k,n])=>`<div class="itm" data-k="${k}"><div class="nm">${n}</div><div class="ck3">${btn(k,'OK','✓')}${btn(k,'NG','—')}${btn(k,'NA','○ Abaikan')}</div></div>`).join('')}
   ${a.jenis==='CO2'?`<div class="itm"><div class="nm">Berat (kg) <span class="l">khusus CO2</span></div><input type="number" step="any" min="0" inputmode="decimal" value="${esc(PS.berat)}" oninput="PS.berat=this.value"></div>`:''}
   <div class="itm"><div class="nm">Tanggal</div><input type="date" value="${esc(PS.tgl)}" onchange="PS.tgl=this.value"></div>
