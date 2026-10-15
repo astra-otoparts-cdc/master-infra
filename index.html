@@ -1322,7 +1322,7 @@ function qrSvg(text,size){
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${t} ${t}" width="${size}" height="${size}" shape-rendering="crispEdges"><rect width="${t}" height="${t}" fill="#fff"/><path d="${d}" fill="#000"/></svg>`;
 }
 const baseUrl=()=>PUBLIC_URL||(location.origin&&location.origin!=='null'?location.origin+location.pathname:location.href.split(/[?#]/)[0]);
-const qrLink=k=>baseUrl()+'?cek='+encodeURIComponent(k);
+const qrLink=x=>baseUrl()+'?cek='+encodeURIComponent(x.kode)+'&plant='+encodeURIComponent(x.plant);
 
 // baca data APAR lewat Apps Script (JSONP)
 let jq=0;
@@ -1361,13 +1361,13 @@ function hasilPage(){
   <button class="sm" onclick="loadApar()">↻ Muat ulang</button></div>`;
   if(!AM||!AR)return h+(stateBox()||'<div class="card empty">Memuat data checksheet…</div>');
   const list=AM.filter(x=>!aPlant||x.plant===aPlant),idx={};
-  AR.forEach(r=>{idx[r.kode+'|'+r.bulan]=r});
+  AR.forEach(r=>{idx[r.plant+'|'+r.kode+'|'+r.bulan]=r});
   const sts=r=>{const v=Object.values(r.items);return v.includes('NG')?'NG':v.includes('OK')?'OK':'NA'};
   h+=`<div class="wrap"><table class="mx"><thead><tr><th class="l">NO</th><th class="l">KODE ALAT</th><th class="l">PLANT</th><th class="l">JENIS</th><th class="l">LOKASI</th>${BLN.map(b=>`<th>${b.toUpperCase()}</th>`).join('')}</tr></thead><tbody>`;
   const cnt=Array(12).fill(0);
   list.forEach((x,i)=>{
     h+=`<tr><td class="l">${i+1}</td><td class="l"><b>${esc(x.kode)}</b></td><td class="l">${esc(x.plant)}</td><td class="l">${esc(x.jenis)} ${esc(x.kap)} kg</td><td class="l" style="white-space:normal">${esc(x.lokasi)}</td>`;
-    for(let m=0;m<12;m++){const b=aYear+'-'+String(m+1).padStart(2,'0'),r=idx[x.kode+'|'+b];
+    for(let m=0;m<12;m++){const b=aYear+'-'+String(m+1).padStart(2,'0'),r=idx[x.plant+'|'+x.kode+'|'+b];
       if(r){cnt[m]++;const s=sts(r);h+=`<td><span class="cell ${MARK[s][1]}" title="${MARK[s][2]} · ${esc(r.tgl)} · ${esc(r.petugas)}" onclick="aparDetail(${i},'${b}')">${MARK[s][0]}</span></td>`}
       else h+=`<td><span class="cell none">·</span></td>`}
     h+='</tr>'});
@@ -1379,7 +1379,7 @@ function hasilPage(){
 }
 let HV=[];
 function aparDetail(i,bulan){
-  const x=HV[i],r=AR.find(z=>z.kode===x.kode&&z.bulan===bulan);if(!r)return;
+  const x=HV[i],r=AR.find(z=>z.kode===x.kode&&z.plant===x.plant&&z.bulan===bulan);if(!r)return;
   const [yy,mm]=bulan.split('-');
   dlgInfo(`Hasil ${esc(x.kode)} · ${BLNF[+mm-1]} ${yy}`,
    `<div class="l" style="margin:4px 0 10px">${esc(r.plant)} · ${esc(r.lokasi)} · ${esc(r.jenis)} ${esc(r.kap)} kg</div>`
@@ -1390,7 +1390,6 @@ function aparDetail(i,bulan){
 function dlgInfo(ttl,html){onSave=null;dt.textContent=ttl.replace(/&amp;/g,'&');fields.innerHTML=html;dlg.classList.remove('wide');dleg.hidden=true;sbtn.hidden=true;cbtn.textContent='Tutup';dlg.showModal()}
 
 // ---------- Master data ----------
-const nextKode=()=>'APAR'+String(Math.max(0,...(AM||[]).map(r=>parseInt((String(r.kode).match(/\d+$/)||[0])[0],10)||0))+1).padStart(3,'0');
 function masterPage(){
   let h=`<div class="tools"><div style="min-width:210px"><label class="lb">Plant</label><select onchange="mPlant=this.value;render()">${plantOpts(mPlant,true)}</select></div>
   <button class="p" onclick="masterForm(-1)">+ Tambah APAR</button><button class="sm" onclick="printQR(MV.map((_,i)=>i))">🖨 Cetak QR (sesuai filter)</button><button class="sm" onclick="loadApar()">↻ Muat ulang</button></div>`;
@@ -1403,8 +1402,8 @@ function masterPage(){
 }
 function masterForm(i){
   const x=i>=0?MV[i]:null,pl=!x||PLANTS.includes(x.plant)?PLANTS:[...PLANTS,x.plant];
-  dlgOpen((x?'Edit':'Tambah')+' APAR',[['Plant','sel',pl],['Kode Alat','ro'],['Jenis','sel',JENIS],['Kapasitas (kg)','number'],['Lokasi']],
-    [x?x.plant:(mPlant||PLANTS[0]),x?x.kode:nextKode()+' (otomatis)',x?x.jenis:JENIS[0],x?x.kap:'',x?x.lokasi:''],
+  dlgOpen((x?'Edit':'Tambah')+' APAR',[['Plant',x?'ro':'sel',pl],['Kode Alat','ro'],['Jenis','sel',JENIS],['Kapasitas (kg)','number'],['Lokasi']],
+    [x?x.plant:(mPlant||PLANTS[0]),x?x.kode:'otomatis (nomor urut per plant, mulai APAR001)',x?x.jenis:JENIS[0],x?x.kap:'',x?x.lokasi:''],
     async v=>{
       const kap=parseFloat(v[3]);
       if(!(kap>0)){alert('Kapasitas (kg) harus berupa angka lebih dari 0.');return false}
@@ -1416,12 +1415,12 @@ function masterForm(i){
 }
 async function masterDel(i){const x=MV[i];
   if(!confirm('Hapus '+x.kode+' dari master data?\nRiwayat checksheet-nya tetap tersimpan di spreadsheet.'))return;
-  const j=await api({action:'aparDelete',kode:x.kode});if(!j)return;
+  const j=await api({action:'aparDelete',plant:x.plant,kode:x.kode});if(!j)return;
   AM=AM.filter(y=>y!==x);render();loadAparMaster()}
 
 // ---------- QR code ----------
 function showQR(i){const x=MV[i];
-  dlgInfo('QR Code - '+x.kode,`<div class="qrbox">${qrSvg(qrLink(x.kode),240)}<div style="font-weight:700;font-size:18px;margin-top:6px">${esc(x.kode)}</div><div>${esc(x.plant)} · ${esc(x.lokasi)}</div><div class="l" style="word-break:break-all;margin:8px 0">${esc(qrLink(x.kode))}</div><button class="p" onclick="printQR([${i}])">🖨 Cetak QR</button></div>`)}
+  dlgInfo('QR Code - '+x.kode,`<div class="qrbox">${qrSvg(qrLink(x),240)}<div style="font-weight:700;font-size:18px;margin-top:6px">${esc(x.kode)}</div><div>${esc(x.plant)} · ${esc(x.lokasi)}</div><div class="l" style="word-break:break-all;margin:8px 0">${esc(qrLink(x))}</div><button class="p" onclick="printQR([${i}])">🖨 Cetak QR</button></div>`)}
 function printQR(idx){
   const list=idx.map(i=>MV[i]).filter(Boolean);
   if(!list.length){alert('Tidak ada APAR untuk dicetak.');return}
@@ -1435,7 +1434,7 @@ body{font-family:Arial,Helvetica,sans-serif;margin:0;padding:6px;color:#000}
 .lb svg{width:42mm;height:42mm;display:block;margin:0 auto}
 .k{font-size:20px;font-weight:700;margin-top:2mm}.p{font-size:12px;font-weight:700}.s{font-size:11px}.h{font-size:10px;color:#444;margin-top:1mm}
 </style></head><body><div class="bar"><button onclick="print()">🖨 Cetak</button><span>${list.length} label QR. Tempel di tabung APAR; petugas cukup scan untuk mengisi checksheet.</span></div>
-<div class="g">${list.map(x=>`<div class="lb">${qrSvg(qrLink(x.kode),'42mm')}<div class="k">${esc(x.kode)}</div><div class="p">${esc(x.plant)}</div><div class="s">${esc(x.lokasi)}</div><div class="s">${esc(x.jenis)} · ${esc(x.kap)} kg</div><div class="h">Scan untuk Checksheet APAR</div></div>`).join('')}</div>
+<div class="g">${list.map(x=>`<div class="lb">${qrSvg(qrLink(x),'42mm')}<div class="k">${esc(x.kode)}</div><div class="p">${esc(x.plant)}</div><div class="s">${esc(x.lokasi)}</div><div class="s">${esc(x.jenis)} · ${esc(x.kap)} kg</div><div class="h">Scan untuk Checksheet APAR</div></div>`).join('')}</div>
 <script>onload=function(){setTimeout(function(){print()},400)}<\/script></body></html>`;
   const w=window.open('','_blank');
   if(!w){alert('Pop-up diblokir browser. Izinkan pop-up untuk situs ini lalu coba lagi.');return}
@@ -1443,13 +1442,13 @@ body{font-family:Arial,Helvetica,sans-serif;margin:0;padding:6px;color:#000}
 }
 
 // ---------- Form petugas (dibuka dari QR: ?cek=APAR001) ----------
-async function startPetugas(kode){
+async function startPetugas(kode,plant){
   document.body.classList.add('pet');document.title='Checksheet '+kode;
   view.innerHTML='<div class="card empty">Memuat data alat…</div>';
   try{const x=await jsonp({action:'aparMaster'});if(!x.ok)throw new Error(x.error||'Gagal memuat data');AM=x.rows}
   catch(e){view.innerHTML=`<div class="card empty" style="color:var(--r)">${esc(e.message)}</div>`;return}
-  const a=AM.find(r=>r.kode===kode);
-  if(!a){view.innerHTML=`<div class="card empty" style="color:var(--r)">Kode alat <b>${esc(kode)}</b> tidak ditemukan di master data.</div>`;return}
+  const a=AM.find(r=>r.kode===kode&&(!plant||r.plant===plant));
+  if(!a){view.innerHTML=`<div class="card empty" style="color:var(--r)">Kode alat <b>${esc(kode)}</b> tidak ditemukan di master data.${plant?'':' QR lama tidak membawa nama plant, cetak ulang QR dari Master Data.'}</div>`;return}
   let nm='';try{nm=localStorage.getItem('mi_petugas')||''}catch(e){}
   PS={a,items:{},berat:'',tgl:today,petugas:nm,catatan:''};renderPetugas();
 }
@@ -1475,7 +1474,7 @@ async function psSubmit(){
   if(!PS.petugas.trim())return e('Nama petugas wajib diisi.');
   const b=document.getElementById('psbtn');b.disabled=true;b.textContent='Mengirim…';
   try{
-    const res=await fetch(APAR_SCRIPT_URL,{method:'POST',mode:'cors',redirect:'follow',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'aparSubmit',kode:a.kode,tanggal:PS.tgl,petugas:PS.petugas.trim(),items:PS.items,berat:PS.berat,catatan:PS.catatan})});
+    const res=await fetch(APAR_SCRIPT_URL,{method:'POST',mode:'cors',redirect:'follow',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'aparSubmit',kode:a.kode,plant:a.plant,tanggal:PS.tgl,petugas:PS.petugas.trim(),items:PS.items,berat:PS.berat,catatan:PS.catatan})});
     const j=await res.json();if(!j.ok)throw new Error(j.error||'Gagal menyimpan');
     try{localStorage.setItem('mi_petugas',PS.petugas.trim())}catch(x){}
     const [yy,mm]=j.bulan.split('-');
@@ -1489,7 +1488,7 @@ addEventListener('click',e=>{const t=e.target;if(t&&t.matches&&t.matches('input[
 const h0=location.hash.slice(1);
 if(ALL[h0]){cur=h0;if(ALL[h0].parent)subOpen[ALL[h0].parent]=true}
 const cekQ=new URLSearchParams(location.search).get('cek');
-if(cekQ)startPetugas(cekQ);
+if(cekQ)startPetugas(cekQ,new URLSearchParams(location.search).get('plant')||'');
 else{nav();render();loadSheet();loadZones();loadInfo();loadPlants();loadAparMaster();if(cur==='apar')loadAparResults()}
 </script>
 </body>
