@@ -1462,7 +1462,7 @@ async function startPetugas(kode,plant){
     view.innerHTML=`<div class="card"><div style="font-size:18px;font-weight:700;margin-bottom:6px">Pilih Plant</div><div class="l" style="margin-bottom:10px">Kode ${esc(kode)} ada di beberapa plant.</div>${hits.map(h=>`<a class="btnl p" style="display:block;margin:6px 0;padding:12px;font-size:15px" href="?cek=${encodeURIComponent(kode)}&plant=${encodeURIComponent(h.plant)}">${esc(h.plant)} · ${esc(h.lokasi)}</a>`).join('')}</div>`;return}
   const a=hits[0];
   let nm='';try{nm=localStorage.getItem('mi_petugas')||''}catch(e){}
-  PS={a,items:{},berat:'',tgl:today,petugas:nm,catatan:''};renderPetugas();
+  PS={a,items:{},berat:'',exp:expIso(a),tgl:today,petugas:nm,catatan:''};renderPetugas();
 }
 function renderPetugas(){
   const a=PS.a,btn=(k,v,t)=>`<button type="button" data-v="${v}" class="${PS.items[k]===v?'on':''}" onclick="psSet('${k}','${v}')">${t}</button>`;
@@ -1470,7 +1470,8 @@ function renderPetugas(){
   <div style="display:grid;grid-template-columns:90px 1fr;gap:6px 10px;margin-top:12px"><span class="l">Plant</span><b>${esc(a.plant)}</b><span class="l">Kode Alat</span><b>${esc(a.kode)}</b><span class="l">Lokasi</span><b>${esc(a.lokasi)}</b><span class="l">Jenis</span><b>${esc(a.jenis)} · ${esc(a.kap)} kg</b><span class="l">Expired</span><b>${expBadge(a)}</b></div></div>
   <div class="card">${AITEMS.map(([k,n])=>`<div class="itm" data-k="${k}"><div class="nm">${n}</div><div class="ck3">${btn(k,'OK','✓')}${btn(k,'NG','—')}${btn(k,'NA','○ Abaikan')}</div></div>`).join('')}
   ${a.jenis==='CO2'?`<div class="itm"><div class="nm">Berat (kg) <span class="l">khusus CO2</span></div><input type="number" step="any" min="0" inputmode="decimal" value="${esc(PS.berat)}" oninput="PS.berat=this.value"></div>`:''}
-  <div class="itm"><div class="nm">Tanggal</div><input type="date" value="${esc(PS.tgl)}" onchange="PS.tgl=this.value"></div>
+  <div class="itm"><div class="nm">Tanggal Expired <span class="l">ubah jika APAR sudah diisi ulang / diganti</span></div><input type="date" value="${esc(PS.exp)}" onchange="PS.exp=this.value"></div>
+  <div class="itm"><div class="nm">Tanggal Pemeriksaan</div><input type="date" value="${esc(PS.tgl)}" onchange="PS.tgl=this.value"></div>
   <div class="itm"><div class="nm">Nama Petugas</div><input value="${esc(PS.petugas)}" placeholder="Nama petugas" oninput="PS.petugas=this.value"></div>
   <div class="itm"><div class="nm">Catatan</div><textarea oninput="PS.catatan=this.value">${esc(PS.catatan)}</textarea></div>
   <div id="pserr" style="color:var(--r);margin:10px 0;font-weight:600"></div><button class="p" id="psbtn" style="width:100%;padding:14px;font-size:16px" onclick="psSubmit()">Kirim Checksheet</button></div>
@@ -1482,15 +1483,16 @@ async function psSubmit(){
   const miss=AITEMS.filter(([k])=>!PS.items[k]);
   if(miss.length)return e('Pilih ✓, — atau ○ untuk semua item. Belum dipilih: '+miss.map(x=>x[1]).join(', ')+'.');
   if(a.jenis==='CO2'&&!(parseFloat(PS.berat)>0))return e('Berat (kg) wajib diisi untuk APAR CO2.');
-  if(!PS.tgl)return e('Tanggal wajib diisi.');
+  if(!PS.exp)return e('Tanggal expired wajib diisi.');
+  if(!PS.tgl)return e('Tanggal pemeriksaan wajib diisi.');
   if(!PS.petugas.trim())return e('Nama petugas wajib diisi.');
   const b=document.getElementById('psbtn');b.disabled=true;b.textContent='Mengirim…';
   try{
-    const res=await fetch(APAR_SCRIPT_URL,{method:'POST',mode:'cors',redirect:'follow',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'aparSubmit',kode:a.kode,plant:a.plant,tanggal:PS.tgl,petugas:PS.petugas.trim(),items:PS.items,berat:PS.berat,catatan:PS.catatan})});
+    const res=await fetch(APAR_SCRIPT_URL,{method:'POST',mode:'cors',redirect:'follow',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'aparSubmit',kode:a.kode,plant:a.plant,exp:PS.exp,tanggal:PS.tgl,petugas:PS.petugas.trim(),items:PS.items,berat:PS.berat,catatan:PS.catatan})});
     const j=await res.json();if(!j.ok)throw new Error(j.error||'Gagal menyimpan');
     try{localStorage.setItem('mi_petugas',PS.petugas.trim())}catch(x){}
     const [yy,mm]=j.bulan.split('-');
-    view.innerHTML=`<div class="card" style="text-align:center;padding:30px 16px"><div style="font-size:54px;color:#16a34a">✓</div><div style="font-size:19px;font-weight:700;margin:6px 0">Checksheet tersimpan</div><div>${esc(a.kode)} · ${esc(a.plant)}</div><div class="l" style="margin:6px 0 16px">Bulan ${BLNF[+mm-1]} ${yy}${j.updated?' (menggantikan isian sebelumnya di bulan yang sama)':''}</div><button class="p" onclick="location.reload()">Isi lagi</button></div>`;
+    view.innerHTML=`<div class="card" style="text-align:center;padding:30px 16px"><div style="font-size:54px;color:#16a34a">✓</div><div style="font-size:19px;font-weight:700;margin:6px 0">Checksheet tersimpan</div><div>${esc(a.kode)} · ${esc(a.plant)}</div><div class="l" style="margin:6px 0 16px">Bulan ${BLNF[+mm-1]} ${yy}${j.updated?' (menggantikan isian sebelumnya di bulan yang sama)':''}</div>${j.expUpdated?`<div class="l" style="margin:-8px 0 14px">Tanggal expired diperbarui menjadi ${esc(fmtD(PS.exp))}</div>`:''}<button class="p" onclick="location.reload()">Isi lagi</button></div>`;
   }catch(x){b.disabled=false;b.textContent='Kirim Checksheet';e('Gagal mengirim: '+x.message+(x instanceof TypeError?' (periksa koneksi internet)':''))}
 }
 
