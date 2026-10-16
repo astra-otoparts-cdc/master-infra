@@ -101,6 +101,20 @@ dialog{max-height:94vh;overflow:auto}dialog.wide{width:min(940px,96vw)}
 .qrbox{text-align:center}.ro{padding:8px 10px;background:var(--bg);border:1px solid var(--line);border-radius:8px}
 .pet aside,.pet .top{display:none}.pet main{padding:14px}.pet #view{max-width:560px;margin:0 auto}
 @media (max-width:820px){aside{position:fixed;z-index:5;left:-270px;transition:left .2s;padding-top:calc(18px + env(safe-area-inset-top,0px))}aside.open{left:0}#burger{display:block}main{padding:16px}.info{grid-template-columns:1fr}}
+
+/* ===== login, gate, setting ===== */
+aside{display:flex;flex-direction:column}
+.sidebot{margin-top:auto;padding-top:12px;border-top:1px solid rgba(255,255,255,.12);position:sticky;bottom:-18px;background:var(--side);padding-bottom:18px}
+.sidebot .me{padding:8px 12px;font-weight:600}.sidebot .me small{display:block;font-weight:400;opacity:.7}
+body.r2 .dl,body.r3 .dl{display:none!important}
+#gate{position:fixed;inset:0;z-index:100;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:16px;overflow:auto}
+.gcard{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:26px 24px;width:100%;max-width:380px;box-shadow:0 10px 40px rgba(0,0,0,.08)}
+.gcard h2{margin:4px 0 2px;text-align:center}.glogo{font-size:38px;text-align:center}.gsub{color:var(--mut);text-align:center;margin-bottom:14px}
+.gcard input{width:100%;margin-bottom:10px}
+.gmsg{min-height:20px;font-size:13px;margin:2px 0 10px}.gmsg.err{color:var(--r);font-weight:600}.gmsg.ok{color:var(--g);font-weight:600}
+.gbtn{width:100%;padding:12px;font-size:16px}
+.glinks{display:flex;justify-content:space-between;gap:10px;margin-top:14px;font-size:13px}.glinks a{color:var(--pri);cursor:pointer}
+.rolebox{margin-top:14px;font-size:13px;line-height:1.6}
 </style>
 </head>
 <body>
@@ -231,9 +245,9 @@ function nav(){
       if(subOpen[sk])h+=`<div class="sub">${Object.keys(ALL).filter(k=>ALL[k].parent===sk).map(k=>a(k,ALL[k].s||ALL[k].t)).join('')}</div>`;
     }
   }
-  side.innerHTML=h;
+  side.innerHTML=h+(AUTH_ON&&ME?sideBottom():'');
 }
-function go(k){cur=k;q='';if(ALL[k]&&ALL[k].parent)subOpen[ALL[k].parent]=true;location.hash=k;side.classList.remove('open');nav();if(k==='apar'&&!AM)loadApar();if(k==='hydrant'&&!YM)loadHyd();render()}
+function go(k){if(k==='setting'&&!canSetting())return;cur=k;q='';if(ALL[k]&&ALL[k].parent)subOpen[ALL[k].parent]=true;location.hash=k;side.classList.remove('open');nav();if(k==='apar'&&!AM)loadApar();if(k==='hydrant'&&!YM)loadHyd();render()}
 
 function render(){
   if(cur==='home'){title.textContent='Dashboard';crumb.textContent='Master Infra';
@@ -244,6 +258,7 @@ function render(){
         h+=`<div class="card k" onclick="go('${k}')"><div class="n">${n}</div><div class="l">${isL?'Temuan Safety Patrol (Leader)':ALL[k].t}</div><div class="l" style="color:var(--r);margin-top:4px">${al?al+(isL?' risiko rank A':' perlu perhatian'):'&nbsp;'}</div></div>`}
       h+='</div>'}
     view.innerHTML=h;return}
+  if(cur==='setting')return renderSetting();
   const p=ALL[cur];title.textContent=cur==='leader'?'Leader - Safety Patrol':p.t;
   crumb.textContent='Master Infra › '+p.g+(p.parent?' › '+PL[p.parent]:'');
   if(cur==='leader')return renderLeader();
@@ -252,7 +267,7 @@ function render(){
   const rows=D[cur].map((r,i)=>[r,i]).filter(([r])=>r.join(' ').toLowerCase().includes(q.toLowerCase()));
   let h=`<div class="tools"><input class="s" placeholder="Cari..." value="${esc(q)}" oninput="q=this.value;rs(this)"><button class="p" onclick="openF(-1)">+ Tambah</button></div><div class="wrap"><table><thead><tr>`;
   p.c.forEach(c=>h+=`<th>${c[0]}</th>`);h+='<th></th></tr></thead><tbody>';
-  rows.forEach(([r,i])=>{h+='<tr>';r.forEach((v,j)=>{h+=p.c[j][1]==='sel'?`<td><span class="b ${cls(v)}">${esc(v)}</span></td>`:`<td>${esc(v)}</td>`});h+=`<td><button class="sm" onclick="openF(${i})">Edit</button> <button class="sm" onclick="del(${i})">Hapus</button></td></tr>`});
+  rows.forEach(([r,i])=>{h+='<tr>';r.forEach((v,j)=>{h+=p.c[j][1]==='sel'?`<td><span class="b ${cls(v)}">${esc(v)}</span></td>`:`<td>${esc(v)}</td>`});h+=`<td><button class="sm" onclick="openF(${i})">Edit</button> <button class="sm dl" onclick="del(${i})">Hapus</button></td></tr>`});
   h+='</tbody></table>'+(rows.length?'':'<div class="empty">Belum ada data</div>')+'</div>';
   view.innerHTML=h;
 }
@@ -370,7 +385,7 @@ async function save(){const v=[...fields.querySelectorAll('.fld')].map(f=>f.data
   try{res=await onSave(v)}finally{sbtn.disabled=false;sbtn.textContent='Simpan'}
   if(res===false)return;sv();dlg.close();render()}
 function openF(i){dlgOpen((i>=0?'Edit ':'Tambah ')+P[cur].t,P[cur].c,i>=0?D[cur][i]:[],v=>{i>=0?D[cur][i]=v:D[cur].push(v)})}
-function del(i){if(confirm('Hapus data ini?')){D[cur].splice(i,1);sv();render()}}
+function del(i){if(!canDel())return deny();if(confirm('Hapus data ini?')){D[cur].splice(i,1);sv();render()}}
 function editInfo(){const inf=infoOf();
   dlgOpen('Member - Tim '+lt,[['Member (pisahkan dengan koma)']],[inf.member],async v=>{
     const j=await api({action:'setInfo',tgl:ld,tim:lt,member:v[0],zona:inf.zona});if(!j)return false;SI[ld+'|'+lt]={member:v[0],zona:inf.zona}},false)}
@@ -392,7 +407,7 @@ function fixT(i){const x=VR[i];
       if(j.row)x.row=j.row;
       Object.assign(x,{pic:v[0],due:v[1],fix:v[2]});
       loadSheet(true)},false)}
-async function delT(i){const x=VR[i];if(!confirm('Hapus temuan ini dari Google Sheets?\nTindakan ini tidak dapat dibatalkan.'))return;
+async function delT(i){if(!canDel())return deny();const x=VR[i];if(!confirm('Hapus temuan ini dari Google Sheets?\nTindakan ini tidak dapat dibatalkan.'))return;
   const j=await api({action:'delete',row:x.row,ts:x.ts,area0:x.area,temuan0:x.temuan});if(!j)return;
   const r0=j.row||x.row;SH=SH.filter(y=>y!==x);SH.forEach(y=>{if(y.row>r0)y.row--});render();loadSheet(true)}
 // ====================================================================
@@ -1371,8 +1386,9 @@ function loadPlants(){gviz(PLANT_ID,'headers=0').then(x=>{if(x.status!=='ok')ret
   if(z.length){PLANTS=z;if(cur==='apar')render()}}).catch(()=>{})}
 
 function renderApar(){
+  if(!canMaster()&&aTab==='master')aTab='hasil';
   const tab=(k,t)=>`<button class="${aTab===k?'on':''}" onclick="aTab='${k}';render()">${t}</button>`;
-  view.innerHTML=`<div class="tabs">${tab('master','🗂 Master Data')}${tab('hist','🔄 Histori Pengisian & Pembelian')}${tab('hasil','📊 Hasil Checksheet')}</div>`+(aTab==='hasil'?hasilPage():aTab==='master'?masterPage():histPage());
+  view.innerHTML=`<div class="tabs">${canMaster()?tab('master','🗂 Master Data'):''}${tab('hist','🔄 Histori Pengisian & Pembelian')}${tab('hasil','📊 Hasil Checksheet')}</div>`+(aTab==='hasil'?hasilPage():aTab==='master'?masterPage():histPage());
 }
 const plantOpts=(sel,all)=>(all?`<option value="">Semua Plant</option>`:'')+PLANTS.map(p=>`<option${p===sel?' selected':''}>${esc(p)}</option>`).join('');
 const stateBox=()=>amErr?`<div class="card empty" style="color:var(--r)">${esc(amErr)}</div>`:arErr?`<div class="card empty" style="color:var(--r)">${esc(arErr)}</div>`:'';
@@ -1493,9 +1509,9 @@ function histForm(arg){
   if(!x){const sels=fields.querySelectorAll('.fld select');
     if(sels.length>2)sels[1].addEventListener('change',()=>{sels[2].innerHTML=kodes(sels[1].value).map(k=>`<option value="${esc(k)}">${esc(k)}</option>`).join('')})}
 }
-async function histDel(id){const t=AH.find(z=>z.id===id);if(!t||!confirm('Hapus transaksi '+(TJ[t.jenis]||[0,0,t.jenis])[2]+' '+t.kode+' ('+t.plant+') tanggal '+fmtD(t.tgl)+'?'))return;
+async function histDel(id){if(!canDel())return deny();const t=AH.find(z=>z.id===id);if(!t||!confirm('Hapus transaksi '+(TJ[t.jenis]||[0,0,t.jenis])[2]+' '+t.kode+' ('+t.plant+') tanggal '+fmtD(t.tgl)+'?'))return;
   const j=await api({action:'aparHistDelete',id});if(!j)return;AH=AH.filter(z=>z.id!==id);dlg.close();render();loadHist()}
-async function masterDel(i){const x=MV[i];
+async function masterDel(i){if(!canDel())return deny();const x=MV[i];
   if(!confirm('Hapus '+x.kode+' ('+x.plant+') dari master data?\nRiwayat checksheet-nya tetap tersimpan.'))return;
   const j=await api({action:'aparDelete',plant:x.plant,kode:x.kode});if(!j)return;
   AM=AM.filter(y=>y!==x);render();loadAparMaster()}
@@ -1589,8 +1605,9 @@ async function loadHydResults(){const y=yYear;
 function loadHyd(){ymErr=yrErr='';loadHydMaster();loadHydResults()}
 const hydState=()=>ymErr?`<div class="card empty" style="color:var(--r)">${esc(ymErr)}</div>`:yrErr?`<div class="card empty" style="color:var(--r)">${esc(yrErr)}</div>`:'';
 function renderHydrant(){
+  if(!canMaster()&&yTab==='master')yTab='hasil';
   const tab=(k,t)=>`<button class="${yTab===k?'on':''}" onclick="yTab='${k}';render()">${t}</button>`;
-  view.innerHTML=`<div class="tabs">${tab('master','🗂 Master Data')}${tab('hasil','📊 Hasil Checksheet')}</div>`+(yTab==='master'?hydMasterPage():hydResultPage());
+  view.innerHTML=`<div class="tabs">${canMaster()?tab('master','🗂 Master Data'):''}${tab('hasil','📊 Hasil Checksheet')}</div>`+(yTab==='master'?hydMasterPage():hydResultPage());
 }
 const hydNext=plant=>'HYDRANT'+String(Math.max(0,...(YM||[]).filter(r=>r.plant===plant).map(r=>parseInt((String(r.kode).match(/\d+$/)||[0])[0],10)||0))+1).padStart(3,'0');   // tiap plant mulai dari HYD001
 
@@ -1618,7 +1635,7 @@ function hydForm(i){
   if(!x){const sel=fields.querySelector('.fld select'),ro=fields.querySelector('.ro');
     if(sel&&ro)sel.addEventListener('change',()=>{ro.textContent=hydNext(sel.value)+' (otomatis)'})}
 }
-async function hydDel(i){const x=YMV[i];
+async function hydDel(i){if(!canDel())return deny();const x=YMV[i];
   if(!confirm('Hapus '+x.kode+' ('+x.plant+') dari master data?\nRiwayat checksheet-nya tetap tersimpan.'))return;
   const j=await api({action:'hydDelete',plant:x.plant,kode:x.kode});if(!j)return;
   YM=YM.filter(y=>y!==x);render();loadHydMaster()}
@@ -1722,6 +1739,96 @@ async function hsSubmit(){
   }catch(x){b.disabled=false;b.textContent='Kirim Checksheet';e('Gagal mengirim: '+x.message+(x instanceof TypeError?' (periksa koneksi internet)':''))}
 }
 
+
+// ====================================================================
+//  LOGIN & ROLE  (akun disimpan di project Firebase TERSENDIRI: script module ketiga di bagian bawah file)
+//  Role 1 = Admin: akses penuh.  Role 2 = Pimpinan: lihat master data & setting, tanpa hapus.  Role 3 = Staff: tanpa hapus, master data, dan setting.
+// ====================================================================
+const RN={1:'Admin',2:'Pimpinan',3:'Staff'};
+let ROLE=1,ME=null,AUTH_ON=false,BOOTED=false,gMode='login',US=null,usErr='',usLoading=false;
+let _authOk;const _authP=new Promise(r=>{_authOk=r});window.__authOk=_authOk;
+const authReady=()=>Promise.race([_authP,new Promise((_,rej)=>setTimeout(()=>rej(new Error('Gagal memuat layanan login. Periksa koneksi internet lalu muat ulang halaman.')),20000))]);
+const canDel=()=>ROLE===1,canMaster=()=>ROLE<=2,canSetting=()=>ROLE<=2;
+const deny=()=>{alert('Role Anda tidak diizinkan melakukan aksi ini.')};
+function sideBottom(){
+  return `<div class="sidebot">${canSetting()?`<a class="${cur==='setting'?'on':''}" onclick="go('setting')">⚙️ Setting</a>`:''}<div class="me">👤 ${esc(ME.username)}<small>${RN[ROLE]}</small></div><a onclick="doResetMe()">🔑 Ganti password</a><a onclick="doLogout()">🚪 Keluar</a></div>`}
+async function doLogout(){try{await AUTHX.logout()}catch(e){}location.reload()}
+async function doResetMe(){if(!confirm('Kirim link ganti password ke email '+ME.email+'?'))return;
+  try{await AUTHX.resetEmail(ME.email);alert('Link ganti password sudah dikirim ke '+ME.email+'. Periksa kotak masuk atau folder spam.')}catch(e){alert(e.message)}}
+
+// ---------- halaman login ----------
+function showGate(note,isErr){
+  let g=document.getElementById('gate');if(!g){g=document.createElement('div');g.id='gate';document.body.appendChild(g)}
+  const f=(id,l,t,ph,ac)=>`<label class="lb">${l}</label><input id="${id}" type="${t}" placeholder="${ph}" autocomplete="${ac}">`;
+  const body=gMode==='register'?f('g_u','Username','text','huruf kecil, angka, . _ -','username')+f('g_e','Email','email','nama@perusahaan.com','email')+f('g_p','Password (min. 6 karakter)','password','','new-password')+f('g_p2','Ulangi password','password','','new-password')
+    :gMode==='forgot'?f('g_u','Username atau email','text','','username')
+    :f('g_u','Username atau email','text','','username')+f('g_p','Password','password','','current-password');
+  const sub=gMode==='register'?'Buat akun baru (role awal: Staff)':gMode==='forgot'?'Lupa password: link reset dikirim ke email akun':'Masuk untuk melanjutkan';
+  const btn=gMode==='register'?'Daftar':gMode==='forgot'?'Kirim link reset':'Masuk';
+  const links=gMode==='login'?`<a onclick="gSet('forgot')">Lupa password?</a><a onclick="gSet('register')">Daftar akun baru</a>`:gMode==='register'?`<a onclick="gSet('login')">Sudah punya akun? Masuk</a>`:`<a onclick="gSet('login')">← Kembali ke login</a>`;
+  g.innerHTML=`<div class="gcard"><div class="glogo">🏗️</div><h2>Master Infra</h2><div class="gsub">${sub}</div>${body}<div id="g_msg" class="gmsg ${isErr?'err':'ok'}">${esc(note||'')}</div><button class="p gbtn" id="g_btn" onclick="gateSubmit()">${btn}</button><div class="glinks">${links}</div></div>`;
+  g.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();gateSubmit()}};
+  const first=g.querySelector('input');if(first&&!note)first.focus();
+}
+function gSet(m){gMode=m;showGate('')}
+const hideGate=()=>{const g=document.getElementById('gate');if(g)g.remove()};
+async function gateSubmit(){
+  const v=id=>{const e=document.getElementById(id);return e?e.value:''},m=(t,err)=>{const e=document.getElementById('g_msg');e.textContent=t;e.className='gmsg '+(err?'err':'ok')},b=document.getElementById('g_btn');
+  b.disabled=true;const t0=b.textContent;b.textContent='Memproses…';m('');
+  try{
+    if(gMode==='login')await AUTHX.login(v('g_u'),v('g_p'));
+    else if(gMode==='register')await AUTHX.register({username:v('g_u'),email:v('g_e'),password:v('g_p'),password2:v('g_p2')});
+    else{await AUTHX.resetPassword(v('g_u'));m('Jika akun ditemukan, link reset password sudah dikirim ke emailnya. Periksa kotak masuk atau folder spam.',false)}
+  }catch(e){m(e.message,true)}
+  const bb=document.getElementById('g_btn');if(bb){bb.disabled=false;bb.textContent=t0}
+}
+async function startGate(){
+  try{await authReady()}catch(e){showGate(e.message,true);return}
+  if(!AUTHX.enabled){ROLE=1;bootApp();return}   // akun belum dikonfigurasi: website berjalan tanpa login
+  AUTH_ON=true;showGate('Memeriksa sesi…');
+  AUTHX.onAuth((p,err)=>{
+    if(p){ME=p;ROLE=p.role;document.body.classList.remove('r1','r2','r3');document.body.classList.add('r'+ROLE);hideGate();if(!BOOTED){BOOTED=true;bootApp()}else{nav();render()}}
+    else{ME=null;gMode='login';showGate(err||'',!!err)}})
+}
+function bootApp(){
+  if(!canMaster()){if(aTab==='master')aTab='hasil';if(yTab==='master')yTab='hasil'}
+  nav();render();loadSheet();loadZones();loadInfo();loadPlants();loadAparMaster();loadHydMaster();if(cur==='apar')loadAparResults();if(cur==='hydrant')loadHydResults()}
+
+// ---------- halaman Setting (kelola akun) ----------
+async function loadUsers(){if(usLoading)return;usLoading=true;
+  try{await authReady();US=await AUTHX.listUsers();usErr=''}catch(e){usErr=e.message}
+  usLoading=false;if(cur==='setting')render()}
+function renderSetting(){
+  title.textContent='Setting';crumb.textContent='Master Infra › Setting';
+  if(!canSetting()){view.innerHTML='<div class="card empty">Anda tidak punya akses ke halaman ini.</div>';return}
+  if(!US&&!usErr)loadUsers();
+  const R=RN,cnt=r=>US?US.filter(u=>u.role===r).length:0;
+  let h=`<div class="tools"><button class="sm" onclick="US=null;usErr='';render()">↻ Muat ulang</button></div>`;
+  if(usErr)return view.innerHTML=h+`<div class="card empty" style="color:var(--r)">${esc(usErr)}</div>`;
+  if(!US)return view.innerHTML=h+'<div class="card empty">Memuat daftar akun…</div>';
+  h+=`<div class="cards" style="margin-bottom:14px"><div class="card k"><div class="n">${US.length}</div><div class="l">Total akun</div></div><div class="card k"><div class="n">${cnt(1)}</div><div class="l">Admin</div></div><div class="card k"><div class="n">${cnt(2)}</div><div class="l">Pimpinan</div></div><div class="card k"><div class="n">${cnt(3)}</div><div class="l">Staff</div></div></div>`;
+  h+=`<div class="wrap"><table><thead><tr><th>NO</th><th>USERNAME</th><th>EMAIL</th><th>ROLE</th><th>DIBUAT</th><th>AKSI</th></tr></thead><tbody>`;
+  US.forEach((u,i)=>{
+    const self=u.uid===ME.uid,edit=ROLE===1&&!self;
+    const roleCell=edit?`<select onchange="userRole('${esc(u.uid)}',this.value)">${[1,2,3].map(r=>`<option value="${r}"${u.role===r?' selected':''}>${R[r]}</option>`).join('')}</select>`:`<span class="b ${u.role===1?'good':u.role===2?'warn':''}">${R[u.role]||u.role}</span>`;
+    h+=`<tr><td>${i+1}</td><td><b>${esc(u.username)}</b>${self?' <span class="l">(Anda)</span>':''}</td><td>${esc(u.email)}</td><td>${roleCell}</td><td>${u.createdAt?new Date(u.createdAt).toLocaleDateString('id-ID',{day:'numeric',month:'short',year:'numeric'}):'-'}</td><td><button class="sm" onclick="userReset('${esc(u.email)}')">Kirim reset password</button>${edit?` <button class="sm dl" onclick="userDel('${esc(u.uid)}')">Hapus</button>`:''}</td></tr>`});
+  h+='</tbody></table></div>';
+  h+=`<div class="card rolebox"><b>Hak akses role</b><br>
+<b>Admin</b>: akses penuh, mengelola semua akun.<br>
+<b>Pimpinan</b>: melihat master data dan Setting, tanpa hapus data.<br>
+<b>Staff</b>: tanpa hapus data, master data, dan Setting. Akun baru otomatis Staff.<br>
+<div class="l" style="margin-top:8px">Password tidak ditampilkan karena Firebase hanya menyimpannya terenkripsi. Bila ada yang lupa password (termasuk admin), klik <b>Kirim reset password</b>: link ganti password dikirim ke email akun tersebut. Hapus akun mencabut akses akun dari website; catatan loginnya bisa dihapus penuh di Firebase Console &gt; Authentication.</div></div>`;
+  view.innerHTML=h;
+}
+async function userRole(uid,val){
+  try{await AUTHX.updateRole(uid,+val);const u=US.find(x=>x.uid===uid);if(u)u.role=+val;toast('Role diperbarui ✓')}catch(e){alert('Gagal mengubah role: '+e.message)}render()}
+async function userDel(uid){
+  const u=US.find(x=>x.uid===uid);if(!u||!confirm('Hapus akun "'+u.username+'" ('+u.email+')?\nAkun ini tidak bisa masuk lagi ke website.'))return;
+  try{await AUTHX.deleteUser(uid,u.username);US=US.filter(x=>x.uid!==uid);toast('Akun dihapus ✓')}catch(e){alert('Gagal menghapus akun: '+e.message)}render()}
+async function userReset(email){
+  if(!confirm('Kirim link reset password ke '+email+'?'))return;
+  try{await AUTHX.resetEmail(email);alert('Link reset password sudah dikirim ke '+email+'.')}catch(e){alert(e.message)}}
+
 // klik di mana saja pada kolom tanggal langsung membuka kalender
 addEventListener('click',e=>{const t=e.target;if(t&&t.matches&&t.matches('input[type=date]')){try{t.showPicker()}catch(_){}}});
 const h0=location.hash.slice(1);
@@ -1729,7 +1836,7 @@ if(ALL[h0]){cur=h0;if(ALL[h0].parent)subOpen[ALL[h0].parent]=true}
 const qs=new URLSearchParams(location.search),cekQ=qs.get('cek');
 if(qs.get('hyd'))startHydPetugas(qs.get('hyd'),qs.get('plant')||'');
 else if(cekQ)startPetugas(cekQ,qs.get('plant')||'');
-else{nav();render();loadSheet();loadZones();loadInfo();loadPlants();loadAparMaster();loadHydMaster();if(cur==='apar')loadAparResults();if(cur==='hydrant')loadHydResults()}
+else startGate()
 </script>
 <script type="module">
 // ====================================================================
@@ -1959,6 +2066,117 @@ if (/^ISI/.test(firebaseConfig.apiKey)) {
   window.FBH = { read: guard(read, 15000, ERR_H), write: guard(write, 15000, ERR_H.replace('Tidak bisa terhubung', 'Penyimpanan belum terkonfirmasi. Tidak bisa terhubung')), submit };
 }
 window.__fbhOk(window.FBH);
+</script>
+<script type="module">
+// ====================================================================
+//  FIREBASE LOGIN / AKUN  (project ketiga, khusus Authentication + daftar akun)  -  firestore-auth.rules
+//  Koleksi: users/{uid} = {username,email,role,createdAt};  usernames/{username} = {uid,email}
+// ====================================================================
+import { initializeApp } from "https://www.gstatic.com/firebasejs/13.0.0/firebase-app.js";
+import { getFirestore, doc, getDoc, getDocs, collection, updateDoc, writeBatch } from "https://www.gstatic.com/firebasejs/13.0.0/firebase-firestore.js";
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, sendPasswordResetEmail, deleteUser as delAuthUser } from "https://www.gstatic.com/firebasejs/13.0.0/firebase-auth.js";
+
+// ===== firebaseConfig project Login/Akun (master-infra-62ef3) =====
+const firebaseConfig = {
+  apiKey: "AIzaSyD40dXwDhf3e-K8AQi6y39c3_yFntMPbEg",
+  authDomain: "master-infra-62ef3.firebaseapp.com",
+  projectId: "master-infra-62ef3",
+  storageBucket: "master-infra-62ef3.firebasestorage.app",
+  messagingSenderId: "24442447235",
+  appId: "1:24442447235:web:3cac8ae50476a5c989c2b6"
+};
+// Pemilik: akun dengan email ini otomatis menjadi username "admin" dengan role Admin (1) (harus sama dengan firestore-auth.rules)
+const OWNER_EMAIL = 'stevanus.aldy@gmail.com';
+
+if (/^ISI/.test(firebaseConfig.apiKey)) {
+  window.AUTHX = { enabled: false };   // belum dikonfigurasi: website berjalan tanpa login
+} else {
+  const app = initializeApp(firebaseConfig, 'auth');
+  const db = getFirestore(app), auth = getAuth(app);
+  const UN = /^[a-z0-9._-]{3,20}$/;
+  const norm = s => String(s || '').trim().toLowerCase();
+  const fail = m => { throw new Error(m); };
+  const msg = e => {
+    const c = String(e && e.code || '');
+    if (/invalid-credential|wrong-password|user-not-found|invalid-login/.test(c)) return 'Username/email atau password salah.';
+    if (c.includes('email-already-in-use')) return 'Email sudah terdaftar. Gunakan Lupa password bila lupa passwordnya.';
+    if (c.includes('weak-password')) return 'Password minimal 6 karakter.';
+    if (c.includes('invalid-email')) return 'Format email tidak valid.';
+    if (c.includes('too-many-requests')) return 'Terlalu banyak percobaan. Coba lagi beberapa menit lagi.';
+    if (c.includes('network')) return 'Tidak ada koneksi internet.';
+    if (c.includes('operation-not-allowed')) return 'Metode login Email/Password belum diaktifkan di Firebase Authentication.';
+    if (c.includes('permission-denied') || /insufficient permissions/i.test(e && e.message || '')) return 'Ditolak oleh aturan database. Pastikan firestore-auth.rules sudah di-Publish.';
+    return (e && e.message) || 'Terjadi kesalahan.';
+  };
+  const wrap = f => async (...a) => { try { return await f(...a); } catch (e) { throw new Error(msg(e)); } };
+  const emailOf = async v => {
+    v = norm(v); if (!v) fail('Username atau email wajib diisi.');
+    if (v.includes('@')) return v;
+    const s = await getDoc(doc(db, 'usernames', v));
+    return s.exists() ? s.data().email : null;
+  };
+  async function profileOf(user) {
+    const r = doc(db, 'users', user.uid);
+    let s = await getDoc(r);
+    if (!s.exists()) {
+      if (norm(user.email) !== OWNER_EMAIL) return null;
+      const b = writeBatch(db);   // pemilik pertama kali masuk: buat profil Role 1
+      b.set(r, { username: 'admin', email: norm(user.email), role: 1, createdAt: Date.now() });
+      b.set(doc(db, 'usernames', 'admin'), { uid: user.uid, email: norm(user.email) });
+      await b.commit(); s = await getDoc(r);
+    }
+    return { uid: user.uid, ...s.data() };
+  }
+  let cb = null, regBusy = false;
+  async function handle(user) {
+    if (!cb) return;
+    if (!user) { cb(null); return; }
+    try {
+      const p = await profileOf(user);
+      if (!p) { await signOut(auth); cb(null, 'Akun ini tidak terdaftar atau sudah dihapus oleh admin.'); return; }
+      cb(p);
+    } catch (e) { cb(null, msg(e)); }
+  }
+  window.AUTHX = {
+    enabled: true,
+    onAuth: f => { cb = f; onAuthStateChanged(auth, u => { if (!regBusy) handle(u); }); },
+    login: wrap(async (id, pw) => {
+      if (!pw) fail('Password wajib diisi.');
+      const email = await emailOf(id);
+      if (!email) fail('Username/email atau password salah.');
+      await signInWithEmailAndPassword(auth, email, pw);
+    }),
+    register: wrap(async ({ username, email, password, password2 }) => {
+      const e = norm(email), owner = e === OWNER_EMAIL, un = owner ? 'admin' : norm(username);
+      if (!UN.test(un)) fail('Username 3–20 karakter: huruf kecil, angka, titik, garis bawah, atau strip.');
+      if (un === 'admin' && !owner) fail('Username "admin" tidak tersedia.');
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e)) fail('Format email tidak valid.');
+      if (String(password || '').length < 6) fail('Password minimal 6 karakter.');
+      if (password !== password2) fail('Ulangi password tidak sama.');
+      if ((await getDoc(doc(db, 'usernames', un))).exists()) fail('Username sudah dipakai.');
+      regBusy = true;
+      try {
+        const cred = await createUserWithEmailAndPassword(auth, e, password);
+        try {
+          const b = writeBatch(db);
+          b.set(doc(db, 'users', cred.user.uid), { username: un, email: e, role: owner ? 1 : 3, createdAt: Date.now() });
+          b.set(doc(db, 'usernames', un), { uid: cred.user.uid, email: e });
+          await b.commit();
+        } catch (err) { try { await delAuthUser(cred.user); } catch (_) {} throw err; }
+      } finally { regBusy = false; }
+      await handle(auth.currentUser);
+    }),
+    logout: () => signOut(auth),
+    resetPassword: wrap(async id => { const e = await emailOf(id); if (e) { try { await sendPasswordResetEmail(auth, e); } catch (x) { if (!/user-not-found/.test(String(x.code))) throw x; } } }),
+    resetEmail: wrap(async email => { await sendPasswordResetEmail(auth, norm(email)); }),
+    listUsers: wrap(async () => (await getDocs(collection(db, 'users'))).docs.map(d => ({ uid: d.id, ...d.data() })).sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0))),
+    updateRole: wrap(async (uid, role) => { if (![1, 2, 3].includes(role)) fail('Role tidak valid'); await updateDoc(doc(db, 'users', uid), { role }); }),
+    deleteUser: wrap(async (uid, username) => {
+      const b = writeBatch(db); b.delete(doc(db, 'users', uid)); if (username) b.delete(doc(db, 'usernames', norm(username))); await b.commit();
+    })
+  };
+}
+window.__authOk(window.AUTHX);
 </script>
 </body>
 </html>
