@@ -1861,7 +1861,9 @@ async function submit(q) {
   return { ok: true, updated, bulan, expUpdated, queued: r === 'queued' };
 }
 
-window.FBA = { read, write, submit };
+const guard = (fn, ms, msg) => (...a) => Promise.race([fn(...a), new Promise((_, rej) => setTimeout(() => rej(new Error(msg)), ms))]);
+const ERR_A = 'Tidak bisa terhubung ke database Firebase APAR. Pastikan Firestore sudah dibuat (Create database) dan aturan firestore.rules sudah di-Publish di project checksheet-apar, lalu muat ulang halaman.';
+window.FBA = { read: guard(read, 15000, ERR_A), write: guard(write, 15000, ERR_A.replace('Tidak bisa terhubung', 'Penyimpanan belum terkonfirmasi. Tidak bisa terhubung')), submit };
 window.__fbaOk(window.FBA);
 </script>
 <script type="module">
@@ -1951,7 +1953,9 @@ if (/^ISI/.test(firebaseConfig.apiKey)) {
     const r = await Promise.race([pr.then(() => 'ok'), sleep(8000).then(() => 'queued')]);   // offline: tersimpan di HP, terkirim saat online
     return { ok: true, updated, bulan, queued: r === 'queued' };
   }
-  window.FBH = { read, write, submit };
+    const guard = (fn, ms, msg) => (...a) => Promise.race([fn(...a), new Promise((_, rej) => setTimeout(() => rej(new Error(msg)), ms))]);
+  const ERR_H = 'Tidak bisa terhubung ke database Firebase Hydrant. Pastikan Firestore sudah dibuat (Create database) dan aturan firestore-hydrant.rules sudah di-Publish di project checksheet-hydrant, lalu muat ulang halaman.';
+  window.FBH = { read: guard(read, 15000, ERR_H), write: guard(write, 15000, ERR_H.replace('Tidak bisa terhubung', 'Penyimpanan belum terkonfirmasi. Tidak bisa terhubung')), submit };
 }
 window.__fbhOk(window.FBH);
 </script>
