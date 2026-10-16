@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Master Infra</title>
+<title>Logistics & Procurement - Master Data Infra</title>
 <style>
 :root{color-scheme:light;--bg:#f4f6f9;--card:#fff;--tx:#1b2430;--mut:#6b7686;--line:#e2e7ee;--pri:#1f5eff;--side:#0f1b2d;--sidetx:#c9d3e3;--g:#0f8a4f;--gb:#e0f5ea;--w:#a86100;--wb:#fff1d6;--r:#c62828;--rb:#fde4e4;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 :root[data-theme="dark"]{--bg:#0d1117;--card:#161c26;--tx:#e6ebf2;--mut:#8b97a8;--line:#273040;--pri:#5b8cff;--side:#080d15;--g:#4ade80;--gb:#12301f;--w:#fbbf24;--wb:#3a2c0c;--r:#f87171;--rb:#3a1717}
@@ -109,7 +109,7 @@ aside{display:flex;flex-direction:column}
 body.r2 .dl,body.r3 .dl{display:none!important}
 #gate{position:fixed;inset:0;z-index:100;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:16px;overflow:auto}
 .gcard{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:26px 24px;width:100%;max-width:380px;box-shadow:0 10px 40px rgba(0,0,0,.08)}
-.gcard h2{margin:4px 0 2px;text-align:center}.glogo{text-align:center;margin-bottom:6px}.glogo img{display:block;margin:0 auto;max-width:100%;width:260px;height:auto;object-fit:contain}.mlogo{display:block;text-align:center;height:auto;padding:4px 10px 16px}.mlogo img{display:block;margin:0 auto 6px;max-width:100%;width:190px;height:auto;object-fit:contain}.mlogo small{display:block}.gsub{color:var(--mut);text-align:center;margin-bottom:14px}
+.gcard h2{margin:4px 0 2px;text-align:center;font-size:17px;line-height:1.3}.glogo{text-align:center;margin-bottom:6px}.glogo img{display:block;margin:0 auto;max-width:100%;width:260px;height:auto;object-fit:contain}.mlogo{display:block;text-align:center;height:auto;padding:4px 10px 16px}.mlogo img{display:block;margin:0 auto 6px;max-width:100%;width:190px;height:auto;object-fit:contain}.mlogo small{display:block}.gsub{color:var(--mut);text-align:center;margin-bottom:14px}
 .gcard input{width:100%;margin-bottom:10px}
 .gmsg{min-height:20px;font-size:13px;margin:2px 0 10px}.gmsg.err{color:var(--r);font-weight:600}.gmsg.ok{color:var(--g);font-weight:600}
 .gbtn{width:100%;padding:12px;font-size:16px}
@@ -236,7 +236,7 @@ async function api(payload){
 }
 function nav(){
   const a=(k,t)=>`<a class="${k===cur?'on':''}" onclick="go('${k}')">${t}</a>`;
-  let h='<div class="logo mlogo"><img src="'+LOGO_DARK+'" alt="Astra Otoparts"><small>Master Infra · Manajemen Infrastruktur</small></div>'+a('home','🏠 Dashboard');
+  let h='<div class="logo mlogo"><img src="'+LOGO_DARK+'" alt="Astra Otoparts"><small>Logistics &amp; Procurement - Master Data Infra<br>Manajemen Infrastruktur dan Aset</small></div>'+a('home','🏠 Dashboard');
   for(const g of GRP){
     h+=`<div class="grp">${ICON[g]} ${g}</div>`;
     for(const k in P)if(P[k].g===g&&!P[k].parent)h+=a(k,P[k].t);
@@ -250,7 +250,7 @@ function nav(){
 function go(k){if(k==='setting'&&!canSetting())return;cur=k;q='';if(ALL[k]&&ALL[k].parent)subOpen[ALL[k].parent]=true;location.hash=k;side.classList.remove('open');nav();if(k==='apar'&&!AM)loadApar();if(k==='hydrant'&&!YM)loadHyd();render()}
 
 function render(){
-  if(cur==='home'){title.textContent='Dashboard';crumb.textContent='Master Infra';
+  if(cur==='home'){title.textContent='Dashboard';crumb.textContent='Master Data Infra';
     let h='';
     for(const g of GRP){h+=`<h3>${ICON[g]} ${g}</h3><div class="cards" style="margin-bottom:20px">`;
       for(const k in ALL)if(ALL[k].g===g){
@@ -260,7 +260,7 @@ function render(){
     view.innerHTML=h;return}
   if(cur==='setting')return renderSetting();
   const p=ALL[cur];title.textContent=cur==='leader'?'Leader - Safety Patrol':p.t;
-  crumb.textContent='Master Infra › '+p.g+(p.parent?' › '+PL[p.parent]:'');
+  crumb.textContent='Master Data Infra › '+p.g+(p.parent?' › '+PL[p.parent]:'');
   if(cur==='leader')return renderLeader();
   if(cur==='apar')return renderApar();
   if(cur==='hydrant')return renderHydrant();
@@ -1767,7 +1767,7 @@ function showGate(note,isErr){
   const sub=gMode==='register'?'Buat akun baru (role awal: Staff)':gMode==='forgot'?'Lupa password: link reset dikirim ke email akun':'Masuk untuk melanjutkan';
   const btn=gMode==='register'?'Daftar':gMode==='forgot'?'Kirim link reset':'Masuk';
   const links=gMode==='login'?`<a onclick="gSet('forgot')">Lupa password?</a><a onclick="gSet('register')">Daftar akun baru</a>`:gMode==='register'?`<a onclick="gSet('login')">Sudah punya akun? Masuk</a>`:`<a onclick="gSet('login')">← Kembali ke login</a>`;
-  g.innerHTML=`<div class="gcard"><div class="glogo"><img src="${LOGO_LIGHT}" alt="Astra Otoparts"></div><h2>Master Infra</h2><div class="gsub">${sub}</div>${body}<div id="g_msg" class="gmsg ${isErr?'err':'ok'}">${esc(note||'')}</div><button class="p gbtn" id="g_btn" onclick="gateSubmit()">${btn}</button><div class="glinks">${links}</div></div>`;
+  g.innerHTML=`<div class="gcard"><div class="glogo"><img src="${LOGO_LIGHT}" alt="Astra Otoparts"></div><h2>Logistics &amp; Procurement<br>Master Data Infra</h2><div class="gsub">${sub}</div>${body}<div id="g_msg" class="gmsg ${isErr?'err':'ok'}">${esc(note||'')}</div><button class="p gbtn" id="g_btn" onclick="gateSubmit()">${btn}</button><div class="glinks">${links}</div></div>`;
   g.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();gateSubmit()}};
   const first=g.querySelector('input');if(first&&!note)first.focus();
 }
@@ -1800,7 +1800,7 @@ async function loadUsers(){if(usLoading)return;usLoading=true;
   try{await authReady();US=await AUTHX.listUsers();usErr=''}catch(e){usErr=e.message}
   usLoading=false;if(cur==='setting')render()}
 function renderSetting(){
-  title.textContent='Setting';crumb.textContent='Master Infra › Setting';
+  title.textContent='Setting';crumb.textContent='Master Data Infra › Setting';
   if(!canSetting()){view.innerHTML='<div class="card empty">Anda tidak punya akses ke halaman ini.</div>';return}
   if(!US&&!usErr)loadUsers();
   const R=RN,cnt=r=>US?US.filter(u=>u.role===r).length:0;
