@@ -1752,7 +1752,7 @@ const authReady=()=>Promise.race([_authP,new Promise((_,rej)=>setTimeout(()=>rej
 const canDel=()=>ROLE===1,canMaster=()=>ROLE<=2,canSetting=()=>ROLE<=2;
 const deny=()=>{alert('Role Anda tidak diizinkan melakukan aksi ini.')};
 function sideBottom(){
-  return `<div class="sidebot">${canSetting()?`<a class="${cur==='setting'?'on':''}" onclick="go('setting')">⚙️ Setting</a>`:''}<div class="me">👤 ${esc(ME.username)}<small>${RN[ROLE]}</small></div><a onclick="doResetMe()">🔑 Ganti password</a><a onclick="doLogout()">🚪 Keluar</a></div>`}
+  return `<div class="sidebot">${canSetting()?`<a class="${cur==='setting'?'on':''}" onclick="go('setting')">⚙️ Setting</a>`:''}<div class="me">👤 ${esc(ME.username)}<small>${RN[ROLE]}</small></div><a onclick="doLogout()">🚪 Keluar</a></div>`}
 async function doLogout(){try{await AUTHX.logout()}catch(e){}location.reload()}
 async function doResetMe(){if(!confirm('Kirim link ganti password ke email '+ME.email+'?'))return;
   try{await AUTHX.resetEmail(ME.email);alert('Link ganti password sudah dikirim ke '+ME.email+'. Periksa kotak masuk atau folder spam.')}catch(e){alert(e.message)}}
