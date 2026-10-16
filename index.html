@@ -236,7 +236,7 @@ async function api(payload){
 }
 function nav(){
   const a=(k,t)=>`<a class="${k===cur?'on':''}" onclick="go('${k}')">${t}</a>`;
-  let h='<div class="logo mlogo"><img src="'+LOGO_DARK+'" alt="Astra Otoparts"><small>Logistics &amp; Procurement - Master Data Infra<br>Manajemen Infrastruktur dan Aset</small></div>'+a('home','🏠 Dashboard');
+  let h='<div class="logo mlogo"><img src="'+LOGO_DARK+'" alt="Astra Otoparts"><small>Manajemen Infrastruktur dan Aset</small></div>'+a('home','🏠 Dashboard');
   for(const g of GRP){
     h+=`<div class="grp">${ICON[g]} ${g}</div>`;
     for(const k in P)if(P[k].g===g&&!P[k].parent)h+=a(k,P[k].t);
@@ -1764,7 +1764,7 @@ function showGate(note,isErr){
   const body=gMode==='register'?f('g_u','Username','text','huruf kecil, angka, . _ -','username')+f('g_e','Email','email','nama@perusahaan.com','email')+f('g_p','Password (min. 6 karakter)','password','','new-password')+f('g_p2','Ulangi password','password','','new-password')
     :gMode==='forgot'?f('g_u','Username atau email','text','','username')
     :f('g_u','Username atau email','text','','username')+f('g_p','Password','password','','current-password');
-  const sub=gMode==='register'?'Buat akun baru (role awal: Staff)':gMode==='forgot'?'Lupa password: link reset dikirim ke email akun':'Masuk untuk melanjutkan';
+  const sub=gMode==='register'?'Buat akun baru (role awal: Staff)':gMode==='forgot'?'Lupa password: link reset dikirim ke email akun':'';
   const btn=gMode==='register'?'Daftar':gMode==='forgot'?'Kirim link reset':'Masuk';
   const links=gMode==='login'?`<a onclick="gSet('forgot')">Lupa password?</a><a onclick="gSet('register')">Daftar akun baru</a>`:gMode==='register'?`<a onclick="gSet('login')">Sudah punya akun? Masuk</a>`:`<a onclick="gSet('login')">← Kembali ke login</a>`;
   g.innerHTML=`<div class="gcard"><div class="glogo"><img src="${LOGO_LIGHT}" alt="Astra Otoparts"></div><h2>Logistics &amp; Procurement<br>Master Data Infra</h2><div class="gsub">${sub}</div>${body}<div id="g_msg" class="gmsg ${isErr?'err':'ok'}">${esc(note||'')}</div><button class="p gbtn" id="g_btn" onclick="gateSubmit()">${btn}</button><div class="glinks">${links}</div></div>`;
