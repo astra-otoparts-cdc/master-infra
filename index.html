@@ -1320,9 +1320,10 @@ module.exports = QRCode;
 };
 return {QRCode:req("index"),EC:req("QRErrorCorrectLevel")};})();
 
-function qrSvg(text,size){
+function qrSvg(text,size,mq){
   const q=new QR.QRCode(-1,QR.EC.M);q.addData(text);q.make();
-  const n=q.getModuleCount(),m=4,t=n+m*2;let d='';
+  const n=q.getModuleCount(),m=mq||4,t=n+m*2;   // mq: lebar zona kosong (modul); label cetak memakai 2 karena label sudah punya margin putih
+  let d='';
   for(let r=0;r<n;r++){let c=0;while(c<n){if(q.isDark(r,c)){const s=c;while(c<n&&q.isDark(r,c))c++;d+=`M${s+m} ${r+m}h${c-s}v1h-${c-s}z`}else c++}}
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${t} ${t}" width="${size}" height="${size}" shape-rendering="crispEdges"><rect width="${t}" height="${t}" fill="#fff"/><path d="${d}" fill="#000"/></svg>`;
 }
@@ -1421,7 +1422,7 @@ const expBadge=x=>{const i=expIso(x);if(!i)return '<span class="l">-</span>';con
 const nextKode=plant=>'APAR'+String(Math.max(0,...(AM||[]).filter(r=>r.plant===plant).map(r=>parseInt((String(r.kode).match(/\d+$/)||[0])[0],10)||0))+1).padStart(3,'0');   // tiap plant mulai dari APAR001
 function masterPage(){
   let h=`<div class="tools"><div style="min-width:210px"><label class="lb">Plant</label><select onchange="mPlant=this.value;render()">${plantOpts(mPlant,true)}</select></div>
-  <button class="p" onclick="masterForm(-1)">+ Tambah APAR</button><button class="sm" onclick="printQR(MV.map((_,i)=>i))">🖨 Cetak QR (sesuai filter)</button><button class="sm" onclick="loadApar()">↻ Muat ulang</button></div>`;
+  <button class="p" onclick="masterForm(-1)">+ Tambah APAR</button><button class="sm" onclick="printQR(MV.map((_,i)=>i))">${mPlant?'🖨 Cetak Semua QR · '+esc(mPlant):'🖨 Cetak Semua QR (A4)'}</button><button class="sm" onclick="loadApar()">↻ Muat ulang</button></div>`;
   if(!AM)return h+(stateBox()||'<div class="card empty">Memuat master data…</div>');
   MV=AM.filter(x=>!mPlant||x.plant===mPlant);
   h+=`<div class="wrap"><table><thead><tr><th>NO</th><th>KODE ALAT</th><th>PLANT</th><th>JENIS</th><th>KAPASITAS (KG)</th><th>LOKASI</th><th>TANGGAL EXPIRED</th><th>QR</th><th>AKSI</th></tr></thead><tbody>`;
@@ -1506,17 +1507,17 @@ function printQR(idx){
   const list=idx.map(i=>MV[i]).filter(Boolean);
   if(!list.length){alert('Tidak ada APAR untuk dicetak.');return}
   const doc=`<!DOCTYPE html><html lang="id"><head><meta charset="utf-8"><title>QR Code APAR</title><style>
-@page{size:A4 portrait;margin:8mm}*{box-sizing:border-box}
+@page{size:A4 portrait;margin:6mm}*{box-sizing:border-box}
 body{font-family:Arial,Helvetica,sans-serif;margin:0;padding:6px;color:#000}
 .bar{background:#f1f3f6;border:1px solid #ccd;padding:8px 12px;margin-bottom:10px;font-size:12px}.bar button{font:inherit;padding:6px 14px;margin-right:10px;cursor:pointer}
 @media print{.bar{display:none}body{padding:0}}
-.g{display:grid;grid-template-columns:repeat(3,1fr);gap:4mm}
-.lb{border:1px dashed #666;padding:4mm;text-align:center;break-inside:avoid;page-break-inside:avoid}
-.lb svg{width:42mm;height:42mm;display:block;margin:0 auto}
-.k{font-size:20px;font-weight:700;margin-top:2mm}.p{font-size:12px;font-weight:700}.s{font-size:11px}.h{font-size:10px;color:#444;margin-top:1mm}
-</style></head><body><div class="bar"><button onclick="print()">🖨 Cetak</button><span>${list.length} label QR. Tempel di tabung APAR; petugas cukup scan untuk mengisi checksheet.</span></div>
-<div class="g">${list.map(x=>`<div class="lb">${qrSvg(qrLink(x.kode,x.plant),'42mm')}<div class="k">${esc(x.kode)}</div><div class="p">${esc(x.plant)}</div><div class="s">${esc(x.lokasi)}</div><div class="s">${esc(x.jenis)} · ${esc(x.kap)} kg</div><div class="s">Exp: ${esc(fmtD(expIso(x)))}</div><div class="h">Scan untuk Checksheet APAR</div></div>`).join('')}</div>
-<script>onload=function(){setTimeout(function(){print()},400)}<\/script></body></html>`;
+.g{display:grid;grid-template-columns:repeat(var(--c,3),1fr);gap:2mm}
+.lb{border:1px dashed #666;padding:2mm;line-height:1.1;text-align:center;break-inside:avoid;page-break-inside:avoid}
+.lb svg{width:var(--q,56mm);height:var(--q,56mm);display:block;margin:0 auto}
+.k{font-size:var(--fk,22px);font-weight:700;margin-top:2mm}.p{font-size:var(--fp,15px);font-weight:700}.s{font-size:var(--fs,14px)}.h{font-size:var(--fh,11px);color:#444;margin-top:1mm}
+</style></head><body><div class="bar"><button onclick="print()">🖨 Cetak</button><label>Kolom per baris: <select onchange="setC(this.value)"><option value="3" selected>3 kolom (QR 5 cm, 9 per A4)</option><option value="2">2 kolom (QR 6,5 cm, 4 per A4)</option><option value="4">4 kolom (QR 3,6 cm, 16 per A4)</option></select></label> &nbsp;<span>${list.length} label QR. Tempel di tabung APAR; petugas cukup scan untuk mengisi checksheet.</span></div>
+<div class="g">${list.map(x=>`<div class="lb">${qrSvg(qrLink(x.kode,x.plant),'56mm',2)}<div class="k">${esc(x.kode)}</div><div class="p">${esc(x.plant)}</div><div class="s">${esc(x.lokasi)}</div><div class="s">${esc(x.jenis)} · ${esc(x.kap)} kg</div><div class="s">Exp: ${esc(fmtD(expIso(x)))}</div><div class="h">Scan untuk Checksheet APAR</div></div>`).join('')}</div>
+<script>function setC(c){var m={2:['73mm','28px','18px','16px','12px'],3:['56mm','22px','15px','14px','11px'],4:['40mm','17px','12px','11px','9px']}[c],r=document.documentElement.style,n=['--q','--fk','--fp','--fs','--fh'];r.setProperty('--c',c);for(var i=0;i<5;i++)r.setProperty(n[i],m[i])}<\/script></body></html>`;
   const w=window.open('','_blank');
   if(!w){alert('Pop-up diblokir browser. Izinkan pop-up untuk situs ini lalu coba lagi.');return}
   w.document.open();w.document.write(doc);w.document.close();
@@ -1596,7 +1597,7 @@ const hydNext=plant=>'HYDRANT'+String(Math.max(0,...(YM||[]).filter(r=>r.plant==
 // ---------- Master data ----------
 function hydMasterPage(){
   let h=`<div class="tools"><div style="min-width:210px"><label class="lb">Plant</label><select onchange="ymPlant=this.value;render()">${plantOpts(ymPlant,true)}</select></div>
-  <button class="p" onclick="hydForm(-1)">+ Tambah Hydrant</button><button class="sm" onclick="hydPrintQR(YMV.map((_,i)=>i))">🖨 Cetak QR (sesuai filter)</button><button class="sm" onclick="loadHyd()">↻ Muat ulang</button></div>`;
+  <button class="p" onclick="hydForm(-1)">+ Tambah Hydrant</button><button class="sm" onclick="hydPrintQR(YMV.map((_,i)=>i))">${ymPlant?'🖨 Cetak Semua QR · '+esc(ymPlant):'🖨 Cetak Semua QR (A4)'}</button><button class="sm" onclick="loadHyd()">↻ Muat ulang</button></div>`;
   if(!YM)return h+(hydState()||'<div class="card empty">Memuat master data…</div>');
   YMV=YM.filter(x=>!ymPlant||x.plant===ymPlant);
   h+=`<div class="wrap"><table><thead><tr><th>NO</th><th>KODE ALAT</th><th>PLANT</th><th>LOKASI</th><th>QR</th><th>AKSI</th></tr></thead><tbody>`;
@@ -1629,17 +1630,17 @@ function hydPrintQR(idx){
   const list=idx.map(i=>YMV[i]).filter(Boolean);
   if(!list.length){alert('Tidak ada hydrant untuk dicetak.');return}
   const doc=`<!DOCTYPE html><html lang="id"><head><meta charset="utf-8"><title>QR Code Hydrant</title><style>
-@page{size:A4 portrait;margin:8mm}*{box-sizing:border-box}
+@page{size:A4 portrait;margin:6mm}*{box-sizing:border-box}
 body{font-family:Arial,Helvetica,sans-serif;margin:0;padding:6px;color:#000}
 .bar{background:#f1f3f6;border:1px solid #ccd;padding:8px 12px;margin-bottom:10px;font-size:12px}.bar button{font:inherit;padding:6px 14px;margin-right:10px;cursor:pointer}
 @media print{.bar{display:none}body{padding:0}}
-.g{display:grid;grid-template-columns:repeat(3,1fr);gap:4mm}
-.lb{border:1px dashed #666;padding:4mm;text-align:center;break-inside:avoid;page-break-inside:avoid}
-.lb svg{width:42mm;height:42mm;display:block;margin:0 auto}
-.k{font-size:20px;font-weight:700;margin-top:2mm}.p{font-size:12px;font-weight:700}.s{font-size:11px}.h{font-size:10px;color:#444;margin-top:1mm}
-</style></head><body><div class="bar"><button onclick="print()">🖨 Cetak</button><span>${list.length} label QR. Tempel di box hydrant; petugas cukup scan untuk mengisi checksheet.</span></div>
-<div class="g">${list.map(x=>`<div class="lb">${qrSvg(hydLink(x.kode,x.plant),'42mm')}<div class="k">${esc(x.kode)}</div><div class="p">${esc(x.plant)}</div><div class="s">${esc(x.lokasi)}</div><div class="h">Scan untuk Checksheet Hydrant</div></div>`).join('')}</div>
-<script>onload=function(){setTimeout(function(){print()},400)}<\/script></body></html>`;
+.g{display:grid;grid-template-columns:repeat(var(--c,3),1fr);gap:2mm}
+.lb{border:1px dashed #666;padding:2mm;line-height:1.1;text-align:center;break-inside:avoid;page-break-inside:avoid}
+.lb svg{width:var(--q,56mm);height:var(--q,56mm);display:block;margin:0 auto}
+.k{font-size:var(--fk,22px);font-weight:700;margin-top:2mm}.p{font-size:var(--fp,15px);font-weight:700}.s{font-size:var(--fs,14px)}.h{font-size:var(--fh,11px);color:#444;margin-top:1mm}
+</style></head><body><div class="bar"><button onclick="print()">🖨 Cetak</button><label>Kolom per baris: <select onchange="setC(this.value)"><option value="3" selected>3 kolom (QR 5 cm, 9 per A4)</option><option value="2">2 kolom (QR 6,5 cm, 4 per A4)</option><option value="4">4 kolom (QR 3,6 cm, 16 per A4)</option></select></label> &nbsp;<span>${list.length} label QR. Tempel di box hydrant; petugas cukup scan untuk mengisi checksheet.</span></div>
+<div class="g">${list.map(x=>`<div class="lb">${qrSvg(hydLink(x.kode,x.plant),'56mm',2)}<div class="k">${esc(x.kode)}</div><div class="p">${esc(x.plant)}</div><div class="s">${esc(x.lokasi)}</div><div class="h">Scan untuk Checksheet Hydrant</div></div>`).join('')}</div>
+<script>function setC(c){var m={2:['73mm','28px','18px','16px','12px'],3:['56mm','22px','15px','14px','11px'],4:['40mm','17px','12px','11px','9px']}[c],r=document.documentElement.style,n=['--q','--fk','--fp','--fs','--fh'];r.setProperty('--c',c);for(var i=0;i<5;i++)r.setProperty(n[i],m[i])}<\/script></body></html>`;
   const w=window.open('','_blank');
   if(!w){alert('Pop-up diblokir browser. Izinkan pop-up untuk situs ini lalu coba lagi.');return}
   w.document.open();w.document.write(doc);w.document.close();
