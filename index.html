@@ -145,10 +145,8 @@ const SHEET_URL='https://docs.google.com/spreadsheets/d/'+SHEET_ID+'/edit?usp=sh
 // ===== KONFIGURASI =====
 // Tempel URL Web App Apps Script (hasil Deploy dari Code.gs) di antara tanda kutip agar Edit/Hapus/Member/Zona tersimpan ke Google Sheets.
 const APPS_SCRIPT_URL='https://script.google.com/macros/s/AKfycbw7k7iV_hUFEBDknFy_l-FUUkIqpxXfxWLVnqqQ39f393LscRFk5onWsC_0xKHzH_1B/exec';   // Safety Patrol (spreadsheet temuan)
-const HYDRANT_SCRIPT_URL='https://script.google.com/macros/s/AKfycbyWWx5ngZ3XJehH9qWN8-zarbD-xhkKLzK_-x4mpU_ejE_yA0lLOacSU-gSs9ZDUNun/exec';   // Checksheet Hydrant (spreadsheet Hydrant) - tempel Web app URL dari project Apps Script Hydrant (Code-Hydrant.gs)
-const APAR_OLD_URL='https://script.google.com/macros/s/AKfycbzXxqWGlI1rGVY8H5RXRoqrLeAIG3_oV409Gkdwh0XFMZ5DFFn0qhXexB40ptZ46izj/exec';   // Apps Script APAR lama: hanya dipakai tombol "Impor data lama" ke Firebase
+const HYDRANT_SCRIPT_URL='firebase:hydrant';   // Checksheet Hydrant kini memakai Firebase (project terpisah), lihat blok script module kedua di bagian bawah file
 const APAR_SCRIPT_URL='firebase:apar';   // Checksheet APAR kini memakai Firebase (Firestore), lihat blok script module di bagian bawah file
-const APAR_ADMIN_EMAIL='stevanus.aldy@gmail.com';   // opsional: isi email admin APAR agar login hanya menanyakan password
 const FORM_URL='https://docs.google.com/forms/d/e/1FAIpQLSdMsZ02sHkoKdDFx55pHmYDQ4zksJ-9nIoZeXtJcKwV6UmZBg/viewform';   // form pengisian temuan
 const DEFAULT_ZONA='CDC Plant 2';   // zona untuk data pada spreadsheet temuan ini
 const INFO_TAB='Info Tim';          // tab di spreadsheet temuan (dibuat otomatis oleh Code.gs)
@@ -208,8 +206,8 @@ function getPin(key){let p='';try{p=sessionStorage.getItem(key)||''}catch(e){}
   if(!p){p=prompt('Masukkan PIN untuk mengubah data di Google Sheets:')||'';if(p)try{sessionStorage.setItem(key,p)}catch(e){}}return p}
 function toast(m){tst.textContent=m;tst.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>{tst.hidden=true},2600)}
 async function api(payload){
-  if(/^apar/.test(payload.action)){
-    try{toast('Menyimpan…');const f=await fbaReady();const r=await f.write(payload);cclear();toast('Tersimpan ✓');return r}
+  if(/^(apar|hyd)/.test(payload.action)){
+    try{toast('Menyimpan…');const f=await(/^hyd/.test(payload.action)?fbhReady():fbaReady());const r=await f.write(payload);cclear();toast('Tersimpan ✓');return r}
     catch(e){tst.hidden=true;if(!(e&&e.cancelled))alert('Gagal menyimpan: '+(e&&e.message||e));return null}}
   const isH=/^hyd/.test(payload.action),isA=/^apar/.test(payload.action),url=isH?HYDRANT_SCRIPT_URL:isA?APAR_SCRIPT_URL:APPS_SCRIPT_URL,pk=isH?'mi_pin_hyd':isA?'mi_pin_apar':'mi_pin';
   if(!url){alert('Fitur ubah/hapus ke Google Sheets belum aktif.\nTempel URL Web App Apps Script ke index.html (petunjuk ada di Code.gs).');return null}
@@ -1336,8 +1334,11 @@ let jq=0;
 // jembatan ke Firebase APAR (module di bagian bawah file mengisi window.FBA)
 let _fbaOk;const _fbaP=new Promise(r=>{_fbaOk=r});window.__fbaOk=_fbaOk;
 const fbaReady=()=>Promise.race([_fbaP,new Promise((_,rej)=>setTimeout(()=>rej(new Error('Gagal memuat Firebase. Periksa koneksi internet lalu muat ulang halaman.')),20000))]);
+let _fbhOk;const _fbhP=new Promise(r=>{_fbhOk=r});window.__fbhOk=_fbhOk;
+const fbhReady=()=>Promise.race([_fbhP,new Promise((_,rej)=>setTimeout(()=>rej(new Error('Gagal memuat Firebase. Periksa koneksi internet lalu muat ulang halaman.')),20000))]);
 function jsonp(params,base=APAR_SCRIPT_URL){
   if(base===APAR_SCRIPT_URL)return fbaReady().then(f=>f.read(params));
+  if(base===HYDRANT_SCRIPT_URL)return fbhReady().then(f=>f.read(params));
   return new Promise((res,rej)=>{
   if(!base)return rej(new Error('URL Apps Script untuk fitur ini belum diisi di index.html (lihat petunjuk di file Code-Hydrant.gs).'));
   const cb='__jp'+(++jq)+'_'+Date.now(),sc=document.createElement('script');
@@ -1420,7 +1421,7 @@ const expBadge=x=>{const i=expIso(x);if(!i)return '<span class="l">-</span>';con
 const nextKode=plant=>'APAR'+String(Math.max(0,...(AM||[]).filter(r=>r.plant===plant).map(r=>parseInt((String(r.kode).match(/\d+$/)||[0])[0],10)||0))+1).padStart(3,'0');   // tiap plant mulai dari APAR001
 function masterPage(){
   let h=`<div class="tools"><div style="min-width:210px"><label class="lb">Plant</label><select onchange="mPlant=this.value;render()">${plantOpts(mPlant,true)}</select></div>
-  <button class="p" onclick="masterForm(-1)">+ Tambah APAR</button><button class="sm" onclick="printQR(MV.map((_,i)=>i))">🖨 Cetak QR (sesuai filter)</button><button class="sm" onclick="loadApar()">↻ Muat ulang</button>${AM&&!AM.length&&!amErr?'<button class="sm" onclick="aparMigrate()">⬆ Impor data lama (Google Sheets)</button>':''}${window.FBA&&FBA.user()?'<button class="sm" onclick="FBA.logout()">Keluar admin</button>':''}</div>`;
+  <button class="p" onclick="masterForm(-1)">+ Tambah APAR</button><button class="sm" onclick="printQR(MV.map((_,i)=>i))">🖨 Cetak QR (sesuai filter)</button><button class="sm" onclick="loadApar()">↻ Muat ulang</button></div>`;
   if(!AM)return h+(stateBox()||'<div class="card empty">Memuat master data…</div>');
   MV=AM.filter(x=>!mPlant||x.plant===mPlant);
   h+=`<div class="wrap"><table><thead><tr><th>NO</th><th>KODE ALAT</th><th>PLANT</th><th>JENIS</th><th>KAPASITAS (KG)</th><th>LOKASI</th><th>TANGGAL EXPIRED</th><th>QR</th><th>AKSI</th></tr></thead><tbody>`;
@@ -1494,7 +1495,7 @@ function histForm(arg){
 async function histDel(id){const t=AH.find(z=>z.id===id);if(!t||!confirm('Hapus transaksi '+(TJ[t.jenis]||[0,0,t.jenis])[2]+' '+t.kode+' ('+t.plant+') tanggal '+fmtD(t.tgl)+'?'))return;
   const j=await api({action:'aparHistDelete',id});if(!j)return;AH=AH.filter(z=>z.id!==id);dlg.close();render();loadHist()}
 async function masterDel(i){const x=MV[i];
-  if(!confirm('Hapus '+x.kode+' ('+x.plant+') dari master data?\nRiwayat checksheet-nya tetap tersimpan di spreadsheet.'))return;
+  if(!confirm('Hapus '+x.kode+' ('+x.plant+') dari master data?\nRiwayat checksheet-nya tetap tersimpan.'))return;
   const j=await api({action:'aparDelete',plant:x.plant,kode:x.kode});if(!j)return;
   AM=AM.filter(y=>y!==x);render();loadAparMaster()}
 
@@ -1572,7 +1573,7 @@ async function psSubmit(){
 
 // ====================================================================
 //  CHECKSHEET HYDRANT  (Master Data, Hasil Checksheet, QR code, form petugas)
-//  Memakai project Apps Script TERSENDIRI (Code-Hydrant.gs -> HYDRANT_SCRIPT_URL) dan spreadsheet Hydrant sendiri.
+//  Memakai project Firebase TERSENDIRI (lihat blok script module kedua di bagian bawah file).
 // ====================================================================
 const HITEMS=[['box','Kebersihan Box Hydrant'],['nozzle','Nozzle'],['spray','Variable Spray'],['selang','Selang'],['valve','Valve'],['handle','Handle Valve'],['pilar','Pilar Hydrant'],['coupling','Coupling dan Tutup'],['support','Support Pipa'],['pipa','Pipa']];
 let YM=null,YR=null,ymErr='',yrErr='',yTab='master',ymPlant='',yhPlant='',yYear=String(new Date().getFullYear()),YMV=[],YHV=[],YS=null;
@@ -1601,7 +1602,7 @@ function hydMasterPage(){
   h+=`<div class="wrap"><table><thead><tr><th>NO</th><th>KODE ALAT</th><th>PLANT</th><th>LOKASI</th><th>QR</th><th>AKSI</th></tr></thead><tbody>`;
   YMV.forEach((x,i)=>{h+=`<tr><td>${i+1}</td><td><b>${esc(x.kode)}</b></td><td>${esc(x.plant)}</td><td style="white-space:normal">${esc(x.lokasi)}</td><td><button class="sm" onclick="hydShowQR(${i})">QR</button></td><td><button class="sm ed" onclick="hydForm(${i})">Edit</button> <button class="sm dl" onclick="hydDel(${i})">Hapus</button></td></tr>`});
   h+='</tbody></table>'+(YMV.length?'':'<div class="empty">Belum ada data hydrant</div>')+'</div>';
-  return h+`<div class="l" style="margin-top:8px">Kode alat dibuat otomatis per plant (tiap plant mulai dari HYDRANT001). Data tersimpan di spreadsheet master Hydrant.</div>`+hydState();
+  return h+`<div class="l" style="margin-top:8px">Kode alat dibuat otomatis per plant (tiap plant mulai dari HYDRANT001). Data tersimpan di Firebase (Firestore).</div>`+hydState();
 }
 function hydForm(i){
   const x=i>=0?YMV[i]:null,p0=x?x.plant:(ymPlant||PLANTS[0]);
@@ -1617,7 +1618,7 @@ function hydForm(i){
     if(sel&&ro)sel.addEventListener('change',()=>{ro.textContent=hydNext(sel.value)+' (otomatis)'})}
 }
 async function hydDel(i){const x=YMV[i];
-  if(!confirm('Hapus '+x.kode+' ('+x.plant+') dari master data?\nRiwayat checksheet-nya tetap tersimpan di spreadsheet.'))return;
+  if(!confirm('Hapus '+x.kode+' ('+x.plant+') dari master data?\nRiwayat checksheet-nya tetap tersimpan.'))return;
   const j=await api({action:'hydDelete',plant:x.plant,kode:x.kode});if(!j)return;
   YM=YM.filter(y=>y!==x);render();loadHydMaster()}
 
@@ -1712,11 +1713,11 @@ async function hsSubmit(){
   if(!YS.petugas.trim())return e('Nama petugas wajib diisi.');
   const b=document.getElementById('ysbtn');b.disabled=true;b.textContent='Mengirim…';
   try{
-    const res=await fetch(HYDRANT_SCRIPT_URL,{method:'POST',mode:'cors',redirect:'follow',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'hydSubmit',kode:a.kode,plant:a.plant,tanggal:YS.tgl,petugas:YS.petugas.trim(),items:YS.items,catatan:YS.catatan})});
-    const j=await res.json();if(!j.ok)throw new Error(j.error||'Gagal menyimpan');
+    const f=await fbhReady();
+    const j=await f.submit({kode:a.kode,plant:a.plant,tanggal:YS.tgl,petugas:YS.petugas.trim(),items:YS.items,catatan:YS.catatan});
     try{localStorage.setItem('mi_petugas',YS.petugas.trim())}catch(x){}
     const [yy,mm]=j.bulan.split('-');
-    view.innerHTML=`<div class="card" style="text-align:center;padding:30px 16px"><div style="font-size:54px;color:#16a34a">✓</div><div style="font-size:19px;font-weight:700;margin:6px 0">Checksheet tersimpan</div><div>${esc(a.kode)} · ${esc(a.plant)}</div><div class="l" style="margin:6px 0 16px">Bulan ${BLNF[+mm-1]} ${yy}${j.updated?' (menggantikan isian sebelumnya di bulan yang sama)':''}</div><button class="p" onclick="location.reload()">Isi lagi</button></div>`;
+    view.innerHTML=`<div class="card" style="text-align:center;padding:30px 16px"><div style="font-size:54px;color:#16a34a">✓</div><div style="font-size:19px;font-weight:700;margin:6px 0">Checksheet tersimpan</div><div>${esc(a.kode)} · ${esc(a.plant)}</div><div class="l" style="margin:6px 0 16px">Bulan ${BLNF[+mm-1]} ${yy}${j.updated?' (menggantikan isian sebelumnya di bulan yang sama)':''}</div>${j.queued?`<div class="l" style="margin:-8px 0 14px;color:var(--r)">Belum ada sinyal: data tersimpan di HP ini dan akan terkirim otomatis saat HP kembali online (buka halaman ini lagi).</div>`:''}<button class="p" onclick="location.reload()">Isi lagi</button></div>`;
   }catch(x){b.disabled=false;b.textContent='Kirim Checksheet';e('Gagal mengirim: '+x.message+(x instanceof TypeError?' (periksa koneksi internet)':''))}
 }
 
@@ -1731,12 +1732,11 @@ else{nav();render();loadSheet();loadZones();loadInfo();loadPlants();loadAparMast
 </script>
 <script type="module">
 // ====================================================================
-//  FIREBASE APAR  (project: checksheet-apar)  -  Firestore + Authentication
+//  FIREBASE APAR  (project: checksheet-apar)  -  Firestore
 //  Koleksi: apar_master, apar_hasil, apar_histori.  Aturan keamanan: file firestore.rules
 // ====================================================================
 import { initializeApp } from "https://www.gstatic.com/firebasejs/13.0.0/firebase-app.js";
 import { initializeFirestore, persistentLocalCache, collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, query, where, writeBatch } from "https://www.gstatic.com/firebasejs/13.0.0/firebase-firestore.js";
-import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/13.0.0/firebase-auth.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDcIQKREBhEt1B0p94QZmCnn-RLc6Re6PI",
@@ -1748,7 +1748,6 @@ const firebaseConfig = {
 };
 const app = initializeApp(firebaseConfig);
 const db = initializeFirestore(app, { localCache: persistentLocalCache() });   // cache offline otomatis
-const auth = getAuth(app);
 
 const JENIS = ['Dry Chemical', 'CO2', 'Lithium'], HJ = ['Pengisian', 'Pembelian'];
 const ITEMS = ['pin','segel','tuas','selang','nozzle','tabung','gauge','suara','timah','roda'];
@@ -1761,47 +1760,6 @@ const C = n => collection(db, n);
 
 function cancelled() { const e = new Error('Dibatalkan'); e.cancelled = true; return e; }
 
-// ---------- login admin ----------
-let loginP = null;
-function askLogin() {
-  if (loginP) return loginP;
-  loginP = new Promise((res, rej) => {
-    let em = ''; try { em = localStorage.getItem('mi_apar_email') || ''; } catch (e) {}
-    em = (typeof APAR_ADMIN_EMAIL === 'string' && APAR_ADMIN_EMAIL) || em;
-    const d = document.createElement('dialog');
-    d.innerHTML = `<div class="dwrap"><form method="dialog" onsubmit="return false"><h3 style="margin:0 0 4px">Login Admin APAR</h3><div class="l" style="margin-bottom:10px">Diperlukan untuk menambah, mengubah, atau menghapus data.</div>
-      <label class="lb">Email</label><input id="fbe" type="email" autocomplete="username" value="${em.replace(/"/g, '&quot;')}" style="width:100%;margin-bottom:8px">
-      <label class="lb">Password</label><input id="fbp" type="password" autocomplete="current-password" style="width:100%">
-      <div id="fber" style="color:var(--r);margin:8px 0;font-weight:600"></div>
-      <div class="act"><button type="button" id="fbc">Batal</button><button type="button" class="p" id="fbo">Masuk</button></div></form></div>`;
-    document.body.appendChild(d);
-    const q = i => d.querySelector(i), end = () => { loginP = null; d.close(); d.remove(); };
-    const go = async () => {
-      const e = q('#fbe').value.trim(), pw = q('#fbp').value;
-      if (!e || !pw) { q('#fber').textContent = 'Email dan password wajib diisi.'; return; }
-      q('#fbo').disabled = true; q('#fbo').textContent = 'Masuk…';
-      try {
-        await signInWithEmailAndPassword(auth, e, pw);
-        try { localStorage.setItem('mi_apar_email', e); } catch (x) {}
-        end(); res();
-      } catch (x) {
-        q('#fbo').disabled = false; q('#fbo').textContent = 'Masuk';
-        q('#fber').textContent = /invalid-credential|wrong-password|user-not-found|invalid-email/.test(x.code || '') ? 'Email atau password salah.' : /network/.test(x.code || '') ? 'Tidak ada koneksi internet.' : 'Gagal login: ' + (x.code || x.message);
-      }
-    };
-    q('#fbo').onclick = go;
-    d.addEventListener('keydown', ev => { if (ev.key === 'Enter') { ev.preventDefault(); go(); } });
-    q('#fbc').onclick = () => { end(); rej(cancelled()); };
-    d.addEventListener('cancel', () => { loginP = null; d.remove(); rej(cancelled()); });
-    d.showModal(); (em ? q('#fbp') : q('#fbe')).focus();
-  });
-  return loginP;
-}
-async function needAdmin() {
-  await auth.authStateReady();
-  if (!auth.currentUser) await askLogin();
-}
-onAuthStateChanged(auth, () => { try { if (typeof cur !== 'undefined' && cur === 'apar') render(); } catch (e) {} });
 
 // ---------- baca ----------
 const byTs = (a, b) => (a.ts || 0) - (b.ts || 0);
@@ -1844,7 +1802,6 @@ async function nextId(col, prefix, field, filter) {
   return prefix + String(max + 1).padStart(3, '0');
 }
 async function write(q) {
-  await needAdmin();
   const a = q.action;
   if (a === 'aparAdd') {
     const plant = cl(q.plant); if (!plant) throw new Error('Plant wajib diisi');
@@ -1904,38 +1861,99 @@ async function submit(q) {
   return { ok: true, updated, bulan, expUpdated, queued: r === 'queued' };
 }
 
-// ---------- impor data lama dari Google Sheets (sekali pakai) ----------
-async function migrate() {
-  await needAdmin();
-  if (!confirm('Impor semua data APAR dari Google Sheets lama ke Firebase?\nProses ini aman diulang (data yang sama tidak digandakan).')) throw cancelled();
-  const get = a => jsonp({ action: a, year: '' }, APAR_OLD_URL).then(x => { if (!x.ok) throw new Error(x.error || 'Gagal membaca Google Sheets lama'); return x.rows; });
-  toast('Membaca data lama…');
-  const [m, h, r] = await Promise.all([get('aparMaster'), get('aparHist'), get('aparResults')]);
-  const base = Date.now(), ops = [];
-  m.forEach((x, i) => ops.push([doc(db, 'apar_master', did(x.plant, x.kode)), { kode: x.kode, plant: x.plant, jenis: x.jenis, kap: String(x.kap ?? ''), lokasi: x.lokasi, exp: x.exp || '', ts: base + i }]));
-  r.forEach(x => ops.push([doc(db, 'apar_hasil', did(x.plant, x.kode, x.bulan)), { bulan: x.bulan, tgl: x.tgl, kode: x.kode, plant: x.plant, lokasi: x.lokasi, jenis: x.jenis, kap: String(x.kap ?? ''), items: x.items, berat: x.berat == null ? '' : String(x.berat), petugas: x.petugas, catatan: x.catatan || '', waktu: '' }]));
-  h.forEach(x => ops.push([doc(db, 'apar_histori', x.id), { id: x.id, tgl: x.tgl, plant: x.plant, kode: x.kode, jenis: x.jenis, ket: x.ket || '', waktu: '' }]));
-  for (let i = 0; i < ops.length; i += 400) {
-    const b = writeBatch(db); ops.slice(i, i + 400).forEach(([ref, d]) => b.set(ref, d));
-    toast('Mengimpor ' + Math.min(i + 400, ops.length) + ' / ' + ops.length + '…'); await b.commit();
-  }
-  return { master: m.length, hasil: r.length, histori: h.length };
-}
-
-window.FBA = {
-  read, write, submit,
-  user: () => auth.currentUser,
-  logout: async () => { await signOut(auth); toast('Admin keluar'); },
-  migrate
-};
-window.aparMigrate = async () => {
-  try {
-    const n = await FBA.migrate(); cclear();
-    alert('Impor selesai: ' + n.master + ' alat, ' + n.hasil + ' hasil checksheet, ' + n.histori + ' histori.');
-    loadApar();
-  } catch (e) { if (!(e && e.cancelled)) { tst.hidden = true; alert('Impor gagal: ' + (e.message || e)); } }
-};
+window.FBA = { read, write, submit };
 window.__fbaOk(window.FBA);
+</script>
+<script type="module">
+// ====================================================================
+//  FIREBASE HYDRANT  (project terpisah dari APAR)  -  Firestore
+//  Koleksi: hyd_master, hyd_hasil.  Aturan keamanan: file firestore-hydrant.rules
+// ====================================================================
+import { initializeApp } from "https://www.gstatic.com/firebasejs/13.0.0/firebase-app.js";
+import { initializeFirestore, persistentLocalCache, collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, query, where, writeBatch } from "https://www.gstatic.com/firebasejs/13.0.0/firebase-firestore.js";
+
+// ===== firebaseConfig project Hydrant (checksheet-hydrant) =====
+const firebaseConfig = {
+  apiKey: "AIzaSyAuNTxhA_ldHkKxlVD9uBnElatgwxIDmdo",
+  authDomain: "checksheet-hydrant.firebaseapp.com",
+  projectId: "checksheet-hydrant",
+  storageBucket: "checksheet-hydrant.firebasestorage.app",
+  messagingSenderId: "277524555668",
+  appId: "1:277524555668:web:36de664dde25f7eef69181"
+};
+
+const cl = (v, n) => String(v == null ? '' : v).trim().slice(0, n || 200);
+const did = (...a) => a.map(x => String(x).replace(/\//g, '-')).join('__');
+const isD = x => /^\d{4}-\d{2}-\d{2}$/.test(x);
+const stamp = () => new Date().toLocaleString('sv-SE', { timeZone: 'Asia/Jakarta' });
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const ITEMS = ['box','nozzle','spray','selang','valve','handle','pilar','coupling','support','pipa'];
+
+if (/^ISI/.test(firebaseConfig.apiKey)) {
+  const no = async () => { throw new Error('Firebase Hydrant belum dikonfigurasi di index.html (isi firebaseConfig pada blok script module Hydrant).'); };
+  window.FBH = { read: no, write: no, submit: no };
+} else {
+  const app = initializeApp(firebaseConfig, 'hydrant');
+  const db = initializeFirestore(app, { localCache: persistentLocalCache() });
+  const C = n => collection(db, n);
+  const byTs = (a, b) => (a.ts || 0) - (b.ts || 0);
+
+  async function read(p) {
+    if (p.action === 'hydMaster') {
+      const sn = await getDocs(C('hyd_master'));
+      return { ok: true, rows: sn.docs.map(d => d.data()).sort(byTs).map(x => ({ kode: x.kode, plant: x.plant, lokasi: x.lokasi })) };
+    }
+    if (p.action === 'hydResults') {
+      const y = String(p.year || '');
+      const sn = await getDocs(y ? query(C('hyd_hasil'), where('bulan', '>=', y + '-01'), where('bulan', '<=', y + '-12')) : C('hyd_hasil'));
+      const rows = sn.docs.map(d => d.data()).sort((a, b) => (a.tgl + a.kode).localeCompare(b.tgl + b.kode))
+        .map(x => ({ bulan: x.bulan, tgl: x.tgl, kode: x.kode, plant: x.plant, lokasi: x.lokasi, items: x.items || {}, petugas: x.petugas, catatan: x.catatan || '' }));
+      return { ok: true, rows };
+    }
+    throw new Error('Aksi tidak dikenal: ' + p.action);
+  }
+
+  async function write(q) {
+    const a = q.action;
+    if (a === 'hydAdd') {
+      const plant = cl(q.plant), lokasi = cl(q.lokasi);
+      if (!plant) throw new Error('Plant wajib diisi');
+      if (!lokasi) throw new Error('Lokasi wajib diisi');
+      const sn = await getDocs(query(C('hyd_master'), where('plant', '==', plant)));
+      let max = 0; sn.forEach(d => { const m = /^(?:HYDRANT|HYD)(\d+)$/.exec(String(d.data().kode || '')); if (m) max = Math.max(max, +m[1]); });
+      const kode = 'HYDRANT' + String(max + 1).padStart(3, '0');
+      await setDoc(doc(db, 'hyd_master', did(plant, kode)), { kode, plant, lokasi, ts: Date.now() });
+      return { ok: true, kode };
+    }
+    if (a === 'hydUpdate') {
+      const lokasi = cl(q.lokasi); if (!lokasi) throw new Error('Lokasi wajib diisi');
+      await updateDoc(doc(db, 'hyd_master', did(cl(q.plant), cl(q.kode))), { lokasi });
+      return { ok: true };
+    }
+    if (a === 'hydDelete') { await deleteDoc(doc(db, 'hyd_master', did(cl(q.plant), cl(q.kode)))); return { ok: true }; }
+    throw new Error('Aksi tidak dikenal: ' + a);
+  }
+
+  async function submit(q) {
+    const plant = cl(q.plant), kode = cl(q.kode);
+    if (!plant) throw new Error('Plant tidak diketahui. Buka ulang lewat QR code hydrant.');
+    const ms = await getDoc(doc(db, 'hyd_master', did(plant, kode)));
+    if (!ms.exists()) throw new Error('Kode hydrant tidak ditemukan di master data');
+    const a = ms.data();
+    const tgl = cl(q.tanggal); if (!isD(tgl)) throw new Error('Tanggal tidak valid');
+    const petugas = cl(q.petugas, 100); if (!petugas) throw new Error('Nama petugas wajib diisi');
+    const it = q.items || {}, items = {};
+    ITEMS.forEach(k => { const v = String(it[k] || ''); if (!['OK', 'NG', 'NA'].includes(v)) throw new Error('Semua item pemeriksaan wajib dipilih'); items[k] = v; });
+    const bulan = tgl.slice(0, 7), href = doc(db, 'hyd_hasil', did(plant, kode, bulan));
+    let updated = false; try { updated = (await getDoc(href)).exists(); } catch (e) {}
+    const pr = setDoc(href, { bulan, tgl, kode, plant, lokasi: a.lokasi, items, petugas, catatan: cl(q.catatan, 500), waktu: stamp() });
+    pr.catch(() => {});
+    const r = await Promise.race([pr.then(() => 'ok'), sleep(8000).then(() => 'queued')]);   // offline: tersimpan di HP, terkirim saat online
+    return { ok: true, updated, bulan, queued: r === 'queued' };
+  }
+  window.FBH = { read, write, submit };
+}
+window.__fbhOk(window.FBH);
 </script>
 </body>
 </html>
