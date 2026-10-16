@@ -1428,7 +1428,7 @@ function masterPage(){
   h+=`<div class="wrap"><table><thead><tr><th>NO</th><th>KODE ALAT</th><th>PLANT</th><th>JENIS</th><th>KAPASITAS (KG)</th><th>LOKASI</th><th>TANGGAL EXPIRED</th><th>QR</th><th>AKSI</th></tr></thead><tbody>`;
   MV.forEach((x,i)=>{h+=`<tr><td>${i+1}</td><td><b>${esc(x.kode)}</b></td><td>${esc(x.plant)}</td><td>${esc(x.jenis)}</td><td>${esc(x.kap)}</td><td style="white-space:normal">${esc(x.lokasi)}</td><td>${expBadge(x)}</td><td><button class="sm" onclick="showQR(${i})">QR</button> <button class="sm" onclick="aTab='hist';histForm('${esc(x.plant)}|${esc(x.kode)}');render()">Transaksi</button></td><td><button class="sm ed" onclick="masterForm(${i})">Edit</button> <button class="sm dl" onclick="masterDel(${i})">Hapus</button></td></tr>`});
   h+='</tbody></table>'+(MV.length?'':'<div class="empty">Belum ada data APAR</div>')+'</div>';
-  return h+`<div class="l" style="margin-top:8px">Kode alat dibuat otomatis per plant (tiap plant mulai dari APAR001). Data tersimpan di Firebase (Firestore).</div>`+stateBox();
+  return h+stateBox();
 }
 function masterForm(i){
   const x=i>=0?MV[i]:null,p0=x?x.plant:(mPlant||PLANTS[0]);
@@ -1603,7 +1603,7 @@ function hydMasterPage(){
   h+=`<div class="wrap"><table><thead><tr><th>NO</th><th>KODE ALAT</th><th>PLANT</th><th>LOKASI</th><th>QR</th><th>AKSI</th></tr></thead><tbody>`;
   YMV.forEach((x,i)=>{h+=`<tr><td>${i+1}</td><td><b>${esc(x.kode)}</b></td><td>${esc(x.plant)}</td><td style="white-space:normal">${esc(x.lokasi)}</td><td><button class="sm" onclick="hydShowQR(${i})">QR</button></td><td><button class="sm ed" onclick="hydForm(${i})">Edit</button> <button class="sm dl" onclick="hydDel(${i})">Hapus</button></td></tr>`});
   h+='</tbody></table>'+(YMV.length?'':'<div class="empty">Belum ada data hydrant</div>')+'</div>';
-  return h+`<div class="l" style="margin-top:8px">Kode alat dibuat otomatis per plant (tiap plant mulai dari HYDRANT001). Data tersimpan di Firebase (Firestore).</div>`+hydState();
+  return h+hydState();
 }
 function hydForm(i){
   const x=i>=0?YMV[i]:null,p0=x?x.plant:(ymPlant||PLANTS[0]);
