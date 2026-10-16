@@ -1511,8 +1511,8 @@ function printQR(idx){
 body{font-family:Arial,Helvetica,sans-serif;margin:0;padding:6px;color:#000}
 .bar{background:#f1f3f6;border:1px solid #ccd;padding:8px 12px;margin-bottom:10px;font-size:12px}.bar button{font:inherit;padding:6px 14px;margin-right:10px;cursor:pointer}
 @media print{.bar{display:none}body{padding:0}}
-.g{display:grid;grid-template-columns:repeat(var(--c,3),1fr);gap:2mm}
-.lb{border:1px dashed #666;padding:2mm;line-height:1.1;text-align:center;break-inside:avoid;page-break-inside:avoid}
+.g{display:grid;grid-template-columns:repeat(var(--c,3),1fr);gap:4mm}
+.lb{border:0.6mm solid #000;border-radius:2.5mm;padding:3mm 2mm;line-height:1.1;text-align:center;break-inside:avoid;page-break-inside:avoid}
 .lb svg{width:var(--q,56mm);height:var(--q,56mm);display:block;margin:0 auto}
 .k{font-size:var(--fk,22px);font-weight:700;margin-top:2mm}.p{font-size:var(--fp,15px);font-weight:700}.s{font-size:var(--fs,14px)}.h{font-size:var(--fh,11px);color:#444;margin-top:1mm}
 </style></head><body><div class="bar"><button onclick="print()">🖨 Cetak</button><label>Kolom per baris: <select onchange="setC(this.value)"><option value="3" selected>3 kolom (QR 5 cm, 9 per A4)</option><option value="2">2 kolom (QR 6,5 cm, 4 per A4)</option><option value="4">4 kolom (QR 3,6 cm, 16 per A4)</option></select></label> &nbsp;<span>${list.length} label QR. Tempel di tabung APAR; petugas cukup scan untuk mengisi checksheet.</span></div>
@@ -1634,8 +1634,8 @@ function hydPrintQR(idx){
 body{font-family:Arial,Helvetica,sans-serif;margin:0;padding:6px;color:#000}
 .bar{background:#f1f3f6;border:1px solid #ccd;padding:8px 12px;margin-bottom:10px;font-size:12px}.bar button{font:inherit;padding:6px 14px;margin-right:10px;cursor:pointer}
 @media print{.bar{display:none}body{padding:0}}
-.g{display:grid;grid-template-columns:repeat(var(--c,3),1fr);gap:2mm}
-.lb{border:1px dashed #666;padding:2mm;line-height:1.1;text-align:center;break-inside:avoid;page-break-inside:avoid}
+.g{display:grid;grid-template-columns:repeat(var(--c,3),1fr);gap:4mm}
+.lb{border:0.6mm solid #000;border-radius:2.5mm;padding:3mm 2mm;line-height:1.1;text-align:center;break-inside:avoid;page-break-inside:avoid}
 .lb svg{width:var(--q,56mm);height:var(--q,56mm);display:block;margin:0 auto}
 .k{font-size:var(--fk,22px);font-weight:700;margin-top:2mm}.p{font-size:var(--fp,15px);font-weight:700}.s{font-size:var(--fs,14px)}.h{font-size:var(--fh,11px);color:#444;margin-top:1mm}
 </style></head><body><div class="bar"><button onclick="print()">🖨 Cetak</button><label>Kolom per baris: <select onchange="setC(this.value)"><option value="3" selected>3 kolom (QR 5 cm, 9 per A4)</option><option value="2">2 kolom (QR 6,5 cm, 4 per A4)</option><option value="4">4 kolom (QR 3,6 cm, 16 per A4)</option></select></label> &nbsp;<span>${list.length} label QR. Tempel di box hydrant; petugas cukup scan untuk mengisi checksheet.</span></div>
