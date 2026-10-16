@@ -146,7 +146,9 @@ const SHEET_URL='https://docs.google.com/spreadsheets/d/'+SHEET_ID+'/edit?usp=sh
 // Tempel URL Web App Apps Script (hasil Deploy dari Code.gs) di antara tanda kutip agar Edit/Hapus/Member/Zona tersimpan ke Google Sheets.
 const APPS_SCRIPT_URL='https://script.google.com/macros/s/AKfycbw7k7iV_hUFEBDknFy_l-FUUkIqpxXfxWLVnqqQ39f393LscRFk5onWsC_0xKHzH_1B/exec';   // Safety Patrol (spreadsheet temuan)
 const HYDRANT_SCRIPT_URL='https://script.google.com/macros/s/AKfycbyWWx5ngZ3XJehH9qWN8-zarbD-xhkKLzK_-x4mpU_ejE_yA0lLOacSU-gSs9ZDUNun/exec';   // Checksheet Hydrant (spreadsheet Hydrant) - tempel Web app URL dari project Apps Script Hydrant (Code-Hydrant.gs)
-const APAR_SCRIPT_URL='https://script.google.com/macros/s/AKfycbzXxqWGlI1rGVY8H5RXRoqrLeAIG3_oV409Gkdwh0XFMZ5DFFn0qhXexB40ptZ46izj/exec';   // Checksheet APAR (spreadsheet APAR)
+const APAR_OLD_URL='https://script.google.com/macros/s/AKfycbzXxqWGlI1rGVY8H5RXRoqrLeAIG3_oV409Gkdwh0XFMZ5DFFn0qhXexB40ptZ46izj/exec';   // Apps Script APAR lama: hanya dipakai tombol "Impor data lama" ke Firebase
+const APAR_SCRIPT_URL='firebase:apar';   // Checksheet APAR kini memakai Firebase (Firestore), lihat blok script module di bagian bawah file
+const APAR_ADMIN_EMAIL='stevanus.aldy@gmail.com';   // opsional: isi email admin APAR agar login hanya menanyakan password
 const FORM_URL='https://docs.google.com/forms/d/e/1FAIpQLSdMsZ02sHkoKdDFx55pHmYDQ4zksJ-9nIoZeXtJcKwV6UmZBg/viewform';   // form pengisian temuan
 const DEFAULT_ZONA='CDC Plant 2';   // zona untuk data pada spreadsheet temuan ini
 const INFO_TAB='Info Tim';          // tab di spreadsheet temuan (dibuat otomatis oleh Code.gs)
@@ -206,6 +208,9 @@ function getPin(key){let p='';try{p=sessionStorage.getItem(key)||''}catch(e){}
   if(!p){p=prompt('Masukkan PIN untuk mengubah data di Google Sheets:')||'';if(p)try{sessionStorage.setItem(key,p)}catch(e){}}return p}
 function toast(m){tst.textContent=m;tst.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>{tst.hidden=true},2600)}
 async function api(payload){
+  if(/^apar/.test(payload.action)){
+    try{toast('Menyimpan…');const f=await fbaReady();const r=await f.write(payload);cclear();toast('Tersimpan ✓');return r}
+    catch(e){tst.hidden=true;if(!(e&&e.cancelled))alert('Gagal menyimpan: '+(e&&e.message||e));return null}}
   const isH=/^hyd/.test(payload.action),isA=/^apar/.test(payload.action),url=isH?HYDRANT_SCRIPT_URL:isA?APAR_SCRIPT_URL:APPS_SCRIPT_URL,pk=isH?'mi_pin_hyd':isA?'mi_pin_apar':'mi_pin';
   if(!url){alert('Fitur ubah/hapus ke Google Sheets belum aktif.\nTempel URL Web App Apps Script ke index.html (petunjuk ada di Code.gs).');return null}
   const pin=getPin(pk);if(!pin)return null;
@@ -214,7 +219,7 @@ async function api(payload){
     const res=await fetch(url,{method:'POST',mode:'cors',redirect:'follow',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({...payload,pin})});
     const j=await res.json();
     if(!j.ok){if(j.error==='PIN'){try{sessionStorage.removeItem(pk)}catch(e){}throw new Error('PIN salah.')}throw new Error(j.error||'Gagal menyimpan')}
-    toast('Tersimpan ✓');return j;
+    cclear();toast('Tersimpan ✓');return j;
   }catch(e){tst.hidden=true;alert('Gagal menyimpan: '+e.message+(e instanceof TypeError?'\nPeriksa URL Apps Script dan pastikan akses Web App diatur ke "Siapa saja" (Anyone).':''));return null}
 }
 function nav(){
@@ -1328,7 +1333,12 @@ const qrLink=(k,p)=>baseUrl()+'?cek='+encodeURIComponent(k)+'&plant='+encodeURIC
 
 // baca data APAR lewat Apps Script (JSONP)
 let jq=0;
-function jsonp(params,base=APAR_SCRIPT_URL){return new Promise((res,rej)=>{
+// jembatan ke Firebase APAR (module di bagian bawah file mengisi window.FBA)
+let _fbaOk;const _fbaP=new Promise(r=>{_fbaOk=r});window.__fbaOk=_fbaOk;
+const fbaReady=()=>Promise.race([_fbaP,new Promise((_,rej)=>setTimeout(()=>rej(new Error('Gagal memuat Firebase. Periksa koneksi internet lalu muat ulang halaman.')),20000))]);
+function jsonp(params,base=APAR_SCRIPT_URL){
+  if(base===APAR_SCRIPT_URL)return fbaReady().then(f=>f.read(params));
+  return new Promise((res,rej)=>{
   if(!base)return rej(new Error('URL Apps Script untuk fitur ini belum diisi di index.html (lihat petunjuk di file Code-Hydrant.gs).'));
   const cb='__jp'+(++jq)+'_'+Date.now(),sc=document.createElement('script');
   const done=()=>{clearTimeout(t);delete window[cb];if(sc.remove)sc.remove()};
@@ -1337,11 +1347,21 @@ function jsonp(params,base=APAR_SCRIPT_URL){return new Promise((res,rej)=>{
   sc.onerror=()=>{done();rej(new Error('Gagal menghubungi Apps Script.'))};
   sc.src=base+'?'+new URLSearchParams({...params,callback:cb}).toString();
   document.head.appendChild(sc)})}
+// cache lokal (stale-while-revalidate): tampilkan data terakhir langsung, lalu segarkan dari Apps Script di latar belakang
+const ckey=(p,b)=>'mi_c:'+b.slice(-12)+':'+JSON.stringify(p);
+function cget(p,b){try{const v=JSON.parse(localStorage.getItem(ckey(p,b)));return v&&v.rows?v:null}catch(e){return null}}
+function cput(p,b,x){try{localStorage.setItem(ckey(p,b),JSON.stringify({rows:x.rows}))}catch(e){}}
+function cclear(){try{Object.keys(localStorage).filter(k=>k.startsWith('mi_c:')).forEach(k=>localStorage.removeItem(k))}catch(e){}}
+async function swr(p,b,fail,set,still,after){
+  const c=cget(p,b);if(c){set(c.rows);after()}
+  try{const x=await jsonp(p,b);if(!x.ok)throw new Error(x.error||fail);if(still&&!still())return;set(x.rows);cput(p,b,x);return''}
+  catch(e){return c?'':e.message}}
 async function loadAparMaster(){
-  try{const x=await jsonp({action:'aparMaster'});if(!x.ok)throw new Error(x.error||'Gagal memuat master');AM=x.rows;amErr=''}catch(e){amErr=e.message}
-  if(cur==='apar'||cur==='home')render()}
+  const e=await swr({action:'aparMaster'},APAR_SCRIPT_URL,'Gagal memuat master',r=>{AM=r},null,()=>{if(cur==='apar'||cur==='home')render()});
+  if(e!==undefined)amErr=e;if(cur==='apar'||cur==='home')render()}
 async function loadAparResults(){const y=aYear;
-  try{const x=await jsonp({action:'aparResults',year:y});if(!x.ok)throw new Error(x.error||'Gagal memuat hasil');if(y!==aYear)return;AR=x.rows;arErr=''}catch(e){if(y===aYear)arErr=e.message}
+  const e=await swr({action:'aparResults',year:y},APAR_SCRIPT_URL,'Gagal memuat hasil',r=>{if(y===aYear)AR=r},()=>y===aYear,()=>{if(cur==='apar')render()});
+  if(e!==undefined&&y===aYear)arErr=e;
   if(cur==='apar')render()}
 function loadApar(){amErr=arErr='';loadAparMaster();loadAparResults();loadHist()}
 function loadPlants(){gviz(PLANT_ID,'headers=0').then(x=>{if(x.status!=='ok')return;
@@ -1400,13 +1420,13 @@ const expBadge=x=>{const i=expIso(x);if(!i)return '<span class="l">-</span>';con
 const nextKode=plant=>'APAR'+String(Math.max(0,...(AM||[]).filter(r=>r.plant===plant).map(r=>parseInt((String(r.kode).match(/\d+$/)||[0])[0],10)||0))+1).padStart(3,'0');   // tiap plant mulai dari APAR001
 function masterPage(){
   let h=`<div class="tools"><div style="min-width:210px"><label class="lb">Plant</label><select onchange="mPlant=this.value;render()">${plantOpts(mPlant,true)}</select></div>
-  <button class="p" onclick="masterForm(-1)">+ Tambah APAR</button><button class="sm" onclick="printQR(MV.map((_,i)=>i))">🖨 Cetak QR (sesuai filter)</button><button class="sm" onclick="loadApar()">↻ Muat ulang</button></div>`;
+  <button class="p" onclick="masterForm(-1)">+ Tambah APAR</button><button class="sm" onclick="printQR(MV.map((_,i)=>i))">🖨 Cetak QR (sesuai filter)</button><button class="sm" onclick="loadApar()">↻ Muat ulang</button>${AM&&!AM.length&&!amErr?'<button class="sm" onclick="aparMigrate()">⬆ Impor data lama (Google Sheets)</button>':''}${window.FBA&&FBA.user()?'<button class="sm" onclick="FBA.logout()">Keluar admin</button>':''}</div>`;
   if(!AM)return h+(stateBox()||'<div class="card empty">Memuat master data…</div>');
   MV=AM.filter(x=>!mPlant||x.plant===mPlant);
   h+=`<div class="wrap"><table><thead><tr><th>NO</th><th>KODE ALAT</th><th>PLANT</th><th>JENIS</th><th>KAPASITAS (KG)</th><th>LOKASI</th><th>TANGGAL EXPIRED</th><th>QR</th><th>AKSI</th></tr></thead><tbody>`;
   MV.forEach((x,i)=>{h+=`<tr><td>${i+1}</td><td><b>${esc(x.kode)}</b></td><td>${esc(x.plant)}</td><td>${esc(x.jenis)}</td><td>${esc(x.kap)}</td><td style="white-space:normal">${esc(x.lokasi)}</td><td>${expBadge(x)}</td><td><button class="sm" onclick="showQR(${i})">QR</button> <button class="sm" onclick="aTab='hist';histForm('${esc(x.plant)}|${esc(x.kode)}');render()">Transaksi</button></td><td><button class="sm ed" onclick="masterForm(${i})">Edit</button> <button class="sm dl" onclick="masterDel(${i})">Hapus</button></td></tr>`});
   h+='</tbody></table>'+(MV.length?'':'<div class="empty">Belum ada data APAR</div>')+'</div>';
-  return h+`<div class="l" style="margin-top:8px">Kode alat dibuat otomatis per plant (tiap plant mulai dari APAR001). Data tersimpan di spreadsheet master APAR.</div>`+stateBox();
+  return h+`<div class="l" style="margin-top:8px">Kode alat dibuat otomatis per plant (tiap plant mulai dari APAR001). Data tersimpan di Firebase (Firestore).</div>`+stateBox();
 }
 function masterForm(i){
   const x=i>=0?MV[i]:null,p0=x?x.plant:(mPlant||PLANTS[0]);
@@ -1429,7 +1449,7 @@ function masterForm(i){
 // ---------- Histori APAR: pengisian ulang & pembelian baru (per bulan, setahun) ----------
 let AH=null,hhErr='',hPlant='',hYear=String(new Date().getFullYear()),HM=[];
 const TJ={Pengisian:['🔄','refill','Pengisian ulang'],Pembelian:['🛒','buy','Pembelian baru']};
-async function loadHist(){try{const x=await jsonp({action:'aparHist'});if(!x.ok)throw new Error(x.error||'Gagal memuat histori');AH=x.rows;hhErr=''}catch(e){hhErr=e.message}if(cur==='apar')render()}
+async function loadHist(){const e=await swr({action:'aparHist'},APAR_SCRIPT_URL,'Gagal memuat histori',r=>{AH=r},null,()=>{if(cur==='apar')render()});if(e!==undefined)hhErr=e;if(cur==='apar')render()}
 function histPage(){
   const cy=new Date().getFullYear(),ys=new Set([cy-3,cy-2,cy-1,cy,cy+1,+hYear]),yrs=[...ys].sort();
   let h=`<div class="tools"><div style="min-width:210px"><label class="lb">Plant</label><select onchange="hPlant=this.value;render()">${plantOpts(hPlant,true)}</select></div>
@@ -1505,7 +1525,9 @@ body{font-family:Arial,Helvetica,sans-serif;margin:0;padding:6px;color:#000}
 async function startPetugas(kode,plant){
   document.body.classList.add('pet');document.title='Checksheet '+kode;
   view.innerHTML='<div class="card empty">Memuat data alat…</div>';
-  try{const x=await jsonp({action:'aparMaster'});if(!x.ok)throw new Error(x.error||'Gagal memuat data');AM=x.rows}
+  const pc=cget({action:'aparMaster'},APAR_SCRIPT_URL);
+  if(pc&&pc.rows.some(r=>r.kode===kode&&(!plant||r.plant===plant))){AM=pc.rows;swr({action:'aparMaster'},APAR_SCRIPT_URL,'',r=>{AM=r},null,()=>{})}
+  else try{const x=await jsonp({action:'aparMaster'});if(!x.ok)throw new Error(x.error||'Gagal memuat data');AM=x.rows;cput({action:'aparMaster'},APAR_SCRIPT_URL,x)}
   catch(e){view.innerHTML=`<div class="card empty" style="color:var(--r)">${esc(e.message)}</div>`;return}
   const hits=AM.filter(r=>r.kode===kode&&(!plant||r.plant===plant));
   if(!hits.length){view.innerHTML=`<div class="card empty" style="color:var(--r)">Kode alat <b>${esc(kode)}</b>${plant?' di <b>'+esc(plant)+'</b>':''} tidak ditemukan di master data.</div>`;return}
@@ -1539,11 +1561,11 @@ async function psSubmit(){
   if(!PS.petugas.trim())return e('Nama petugas wajib diisi.');
   const b=document.getElementById('psbtn');b.disabled=true;b.textContent='Mengirim…';
   try{
-    const res=await fetch(APAR_SCRIPT_URL,{method:'POST',mode:'cors',redirect:'follow',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'aparSubmit',kode:a.kode,plant:a.plant,exp:PS.exp,tanggal:PS.tgl,petugas:PS.petugas.trim(),items:PS.items,berat:PS.berat,catatan:PS.catatan})});
-    const j=await res.json();if(!j.ok)throw new Error(j.error||'Gagal menyimpan');
+    const f=await fbaReady();
+    const j=await f.submit({kode:a.kode,plant:a.plant,exp:PS.exp,tanggal:PS.tgl,petugas:PS.petugas.trim(),items:PS.items,berat:PS.berat,catatan:PS.catatan});
     try{localStorage.setItem('mi_petugas',PS.petugas.trim())}catch(x){}
     const [yy,mm]=j.bulan.split('-');
-    view.innerHTML=`<div class="card" style="text-align:center;padding:30px 16px"><div style="font-size:54px;color:#16a34a">✓</div><div style="font-size:19px;font-weight:700;margin:6px 0">Checksheet tersimpan</div><div>${esc(a.kode)} · ${esc(a.plant)}</div><div class="l" style="margin:6px 0 16px">Bulan ${BLNF[+mm-1]} ${yy}${j.updated?' (menggantikan isian sebelumnya di bulan yang sama)':''}</div>${j.expUpdated?`<div class="l" style="margin:-8px 0 14px">Tanggal expired diperbarui menjadi ${esc(fmtD(PS.exp))}</div>`:''}<button class="p" onclick="location.reload()">Isi lagi</button></div>`;
+    view.innerHTML=`<div class="card" style="text-align:center;padding:30px 16px"><div style="font-size:54px;color:#16a34a">✓</div><div style="font-size:19px;font-weight:700;margin:6px 0">Checksheet tersimpan</div><div>${esc(a.kode)} · ${esc(a.plant)}</div><div class="l" style="margin:6px 0 16px">Bulan ${BLNF[+mm-1]} ${yy}${j.updated?' (menggantikan isian sebelumnya di bulan yang sama)':''}</div>${j.expUpdated?`<div class="l" style="margin:-8px 0 14px">Tanggal expired diperbarui menjadi ${esc(fmtD(PS.exp))}</div>`:''}${j.queued?`<div class="l" style="margin:-8px 0 14px;color:var(--r)">Belum ada sinyal: data tersimpan di HP ini dan akan terkirim otomatis saat HP kembali online (buka halaman ini lagi).</div>`:''}<button class="p" onclick="location.reload()">Isi lagi</button></div>`;
   }catch(x){b.disabled=false;b.textContent='Kirim Checksheet';e('Gagal mengirim: '+x.message+(x instanceof TypeError?' (periksa koneksi internet)':''))}
 }
 
@@ -1556,10 +1578,11 @@ const HITEMS=[['box','Kebersihan Box Hydrant'],['nozzle','Nozzle'],['spray','Var
 let YM=null,YR=null,ymErr='',yrErr='',yTab='master',ymPlant='',yhPlant='',yYear=String(new Date().getFullYear()),YMV=[],YHV=[],YS=null;
 const hydLink=(k,p)=>baseUrl()+'?hyd='+encodeURIComponent(k)+'&plant='+encodeURIComponent(p);
 async function loadHydMaster(){
-  try{const x=await jsonp({action:'hydMaster'},HYDRANT_SCRIPT_URL);if(!x.ok)throw new Error(x.error||'Gagal memuat master hydrant');YM=x.rows;ymErr=''}catch(e){ymErr=e.message}
-  if(cur==='hydrant'||cur==='home')render()}
+  const e=await swr({action:'hydMaster'},HYDRANT_SCRIPT_URL,'Gagal memuat master hydrant',r=>{YM=r},null,()=>{if(cur==='hydrant'||cur==='home')render()});
+  if(e!==undefined)ymErr=e;if(cur==='hydrant'||cur==='home')render()}
 async function loadHydResults(){const y=yYear;
-  try{const x=await jsonp({action:'hydResults',year:y},HYDRANT_SCRIPT_URL);if(!x.ok)throw new Error(x.error||'Gagal memuat hasil hydrant');if(y!==yYear)return;YR=x.rows;yrErr=''}catch(e){if(y===yYear)yrErr=e.message}
+  const e=await swr({action:'hydResults',year:y},HYDRANT_SCRIPT_URL,'Gagal memuat hasil hydrant',r=>{if(y===yYear)YR=r},()=>y===yYear,()=>{if(cur==='hydrant')render()});
+  if(e!==undefined&&y===yYear)yrErr=e;
   if(cur==='hydrant')render()}
 function loadHyd(){ymErr=yrErr='';loadHydMaster();loadHydResults()}
 const hydState=()=>ymErr?`<div class="card empty" style="color:var(--r)">${esc(ymErr)}</div>`:yrErr?`<div class="card empty" style="color:var(--r)">${esc(yrErr)}</div>`:'';
@@ -1658,7 +1681,9 @@ function hydDetail(i,bulan){
 async function startHydPetugas(kode,plant){
   document.body.classList.add('pet');document.title='Checksheet '+kode;
   view.innerHTML='<div class="card empty">Memuat data hydrant…</div>';
-  try{const x=await jsonp({action:'hydMaster'},HYDRANT_SCRIPT_URL);if(!x.ok)throw new Error(x.error||'Gagal memuat data');YM=x.rows}
+  const pc=cget({action:'hydMaster'},HYDRANT_SCRIPT_URL);
+  if(pc&&pc.rows.some(r=>r.kode===kode&&(!plant||r.plant===plant))){YM=pc.rows;swr({action:'hydMaster'},HYDRANT_SCRIPT_URL,'',r=>{YM=r},null,()=>{})}
+  else try{const x=await jsonp({action:'hydMaster'},HYDRANT_SCRIPT_URL);if(!x.ok)throw new Error(x.error||'Gagal memuat data');YM=x.rows;cput({action:'hydMaster'},HYDRANT_SCRIPT_URL,x)}
   catch(e){view.innerHTML=`<div class="card empty" style="color:var(--r)">${esc(e.message)}</div>`;return}
   const hits=YM.filter(r=>r.kode===kode&&(!plant||r.plant===plant));
   if(!hits.length){view.innerHTML=`<div class="card empty" style="color:var(--r)">Kode hydrant <b>${esc(kode)}</b>${plant?' di <b>'+esc(plant)+'</b>':''} tidak ditemukan di master data.</div>`;return}
@@ -1703,6 +1728,214 @@ const qs=new URLSearchParams(location.search),cekQ=qs.get('cek');
 if(qs.get('hyd'))startHydPetugas(qs.get('hyd'),qs.get('plant')||'');
 else if(cekQ)startPetugas(cekQ,qs.get('plant')||'');
 else{nav();render();loadSheet();loadZones();loadInfo();loadPlants();loadAparMaster();loadHydMaster();if(cur==='apar')loadAparResults();if(cur==='hydrant')loadHydResults()}
+</script>
+<script type="module">
+// ====================================================================
+//  FIREBASE APAR  (project: checksheet-apar)  -  Firestore + Authentication
+//  Koleksi: apar_master, apar_hasil, apar_histori.  Aturan keamanan: file firestore.rules
+// ====================================================================
+import { initializeApp } from "https://www.gstatic.com/firebasejs/13.0.0/firebase-app.js";
+import { initializeFirestore, persistentLocalCache, collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, query, where, writeBatch } from "https://www.gstatic.com/firebasejs/13.0.0/firebase-firestore.js";
+import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/13.0.0/firebase-auth.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDcIQKREBhEt1B0p94QZmCnn-RLc6Re6PI",
+  authDomain: "checksheet-apar.firebaseapp.com",
+  projectId: "checksheet-apar",
+  storageBucket: "checksheet-apar.firebasestorage.app",
+  messagingSenderId: "197433286609",
+  appId: "1:197433286609:web:909e645090dc0e87a84af0"
+};
+const app = initializeApp(firebaseConfig);
+const db = initializeFirestore(app, { localCache: persistentLocalCache() });   // cache offline otomatis
+const auth = getAuth(app);
+
+const JENIS = ['Dry Chemical', 'CO2', 'Lithium'], HJ = ['Pengisian', 'Pembelian'];
+const ITEMS = ['pin','segel','tuas','selang','nozzle','tabung','gauge','suara','timah','roda'];
+const cl = (v, n) => String(v == null ? '' : v).trim().slice(0, n || 200);
+const did = (...a) => a.map(x => String(x).replace(/\//g, '-')).join('__');
+const isD = x => /^\d{4}-\d{2}-\d{2}$/.test(x);
+const stamp = () => new Date().toLocaleString('sv-SE', { timeZone: 'Asia/Jakarta' });
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const C = n => collection(db, n);
+
+function cancelled() { const e = new Error('Dibatalkan'); e.cancelled = true; return e; }
+
+// ---------- login admin ----------
+let loginP = null;
+function askLogin() {
+  if (loginP) return loginP;
+  loginP = new Promise((res, rej) => {
+    let em = ''; try { em = localStorage.getItem('mi_apar_email') || ''; } catch (e) {}
+    em = (typeof APAR_ADMIN_EMAIL === 'string' && APAR_ADMIN_EMAIL) || em;
+    const d = document.createElement('dialog');
+    d.innerHTML = `<div class="dwrap"><form method="dialog" onsubmit="return false"><h3 style="margin:0 0 4px">Login Admin APAR</h3><div class="l" style="margin-bottom:10px">Diperlukan untuk menambah, mengubah, atau menghapus data.</div>
+      <label class="lb">Email</label><input id="fbe" type="email" autocomplete="username" value="${em.replace(/"/g, '&quot;')}" style="width:100%;margin-bottom:8px">
+      <label class="lb">Password</label><input id="fbp" type="password" autocomplete="current-password" style="width:100%">
+      <div id="fber" style="color:var(--r);margin:8px 0;font-weight:600"></div>
+      <div class="act"><button type="button" id="fbc">Batal</button><button type="button" class="p" id="fbo">Masuk</button></div></form></div>`;
+    document.body.appendChild(d);
+    const q = i => d.querySelector(i), end = () => { loginP = null; d.close(); d.remove(); };
+    const go = async () => {
+      const e = q('#fbe').value.trim(), pw = q('#fbp').value;
+      if (!e || !pw) { q('#fber').textContent = 'Email dan password wajib diisi.'; return; }
+      q('#fbo').disabled = true; q('#fbo').textContent = 'Masuk…';
+      try {
+        await signInWithEmailAndPassword(auth, e, pw);
+        try { localStorage.setItem('mi_apar_email', e); } catch (x) {}
+        end(); res();
+      } catch (x) {
+        q('#fbo').disabled = false; q('#fbo').textContent = 'Masuk';
+        q('#fber').textContent = /invalid-credential|wrong-password|user-not-found|invalid-email/.test(x.code || '') ? 'Email atau password salah.' : /network/.test(x.code || '') ? 'Tidak ada koneksi internet.' : 'Gagal login: ' + (x.code || x.message);
+      }
+    };
+    q('#fbo').onclick = go;
+    d.addEventListener('keydown', ev => { if (ev.key === 'Enter') { ev.preventDefault(); go(); } });
+    q('#fbc').onclick = () => { end(); rej(cancelled()); };
+    d.addEventListener('cancel', () => { loginP = null; d.remove(); rej(cancelled()); });
+    d.showModal(); (em ? q('#fbp') : q('#fbe')).focus();
+  });
+  return loginP;
+}
+async function needAdmin() {
+  await auth.authStateReady();
+  if (!auth.currentUser) await askLogin();
+}
+onAuthStateChanged(auth, () => { try { if (typeof cur !== 'undefined' && cur === 'apar') render(); } catch (e) {} });
+
+// ---------- baca ----------
+const byTs = (a, b) => (a.ts || 0) - (b.ts || 0);
+async function read(p) {
+  if (p.action === 'aparMaster') {
+    const sn = await getDocs(C('apar_master'));
+    const rows = sn.docs.map(d => d.data()).sort(byTs).map(x => ({ kode: x.kode, plant: x.plant, jenis: x.jenis, kap: String(x.kap ?? ''), lokasi: x.lokasi, exp: x.exp || '' }));
+    return { ok: true, rows };
+  }
+  if (p.action === 'aparResults') {
+    const y = String(p.year || '');
+    const sn = await getDocs(y ? query(C('apar_hasil'), where('bulan', '>=', y + '-01'), where('bulan', '<=', y + '-12')) : C('apar_hasil'));
+    const rows = sn.docs.map(d => d.data()).sort((a, b) => (a.tgl + a.kode).localeCompare(b.tgl + b.kode))
+      .map(x => ({ bulan: x.bulan, tgl: x.tgl, kode: x.kode, plant: x.plant, lokasi: x.lokasi, jenis: x.jenis, kap: String(x.kap ?? ''), items: x.items || {}, berat: x.berat == null ? '' : String(x.berat), petugas: x.petugas, catatan: x.catatan || '' }));
+    return { ok: true, rows };
+  }
+  if (p.action === 'aparHist') {
+    const sn = await getDocs(C('apar_histori'));
+    const rows = sn.docs.map(d => d.data()).sort((a, b) => String(a.id).localeCompare(String(b.id)))
+      .map(x => ({ id: x.id, tgl: x.tgl, plant: x.plant, kode: x.kode, jenis: x.jenis, ket: x.ket || '' }));
+    return { ok: true, rows };
+  }
+  throw new Error('Aksi tidak dikenal: ' + p.action);
+}
+
+// ---------- tulis (admin) ----------
+function chkMaster(q) {
+  const jenis = cl(q.jenis), lokasi = cl(q.lokasi), exp = cl(q.exp), kap = parseFloat(q.kap);
+  if (!JENIS.includes(jenis)) throw new Error('Jenis tidak valid');
+  if (!(kap > 0)) throw new Error('Kapasitas harus lebih dari 0');
+  if (!lokasi) throw new Error('Lokasi wajib diisi');
+  if (exp && !isD(exp)) throw new Error('Format tanggal expired tidak valid');
+  return { jenis, kap: String(kap), lokasi, exp };
+}
+async function nextId(col, prefix, field, filter) {
+  const sn = await getDocs(filter ? query(C(col), filter) : C(col));
+  const re = new RegExp('^' + prefix + '(\\d+)$');
+  let max = 0;
+  sn.forEach(d => { const m = re.exec(String(d.data()[field] || '')); if (m) max = Math.max(max, +m[1]); });
+  return prefix + String(max + 1).padStart(3, '0');
+}
+async function write(q) {
+  await needAdmin();
+  const a = q.action;
+  if (a === 'aparAdd') {
+    const plant = cl(q.plant); if (!plant) throw new Error('Plant wajib diisi');
+    const f = chkMaster(q);
+    const kode = await nextId('apar_master', 'APAR', 'kode', where('plant', '==', plant));
+    await setDoc(doc(db, 'apar_master', did(plant, kode)), { kode, plant, ...f, ts: Date.now() });
+    return { ok: true, kode, exp: f.exp };
+  }
+  if (a === 'aparUpdate') {
+    const f = chkMaster(q), r = doc(db, 'apar_master', did(cl(q.plant), cl(q.kode)));
+    await updateDoc(r, f);
+    return { ok: true, exp: f.exp };
+  }
+  if (a === 'aparDelete') { await deleteDoc(doc(db, 'apar_master', did(cl(q.plant), cl(q.kode)))); return { ok: true }; }
+  if (a === 'aparHistAdd' || a === 'aparHistUpdate') {
+    const jenis = cl(q.jenis), tgl = cl(q.tgl), ket = cl(q.ket, 500);
+    if (!HJ.includes(jenis)) throw new Error('Jenis transaksi tidak valid');
+    if (!tgl) throw new Error('Tanggal transaksi wajib diisi');
+    if (!isD(tgl)) throw new Error('Format Tanggal transaksi tidak valid');
+    if (a === 'aparHistUpdate') { await updateDoc(doc(db, 'apar_histori', cl(q.id)), { tgl, jenis, ket }); return { ok: true }; }
+    const plant = cl(q.plant), kode = cl(q.kode);
+    if (!(await getDoc(doc(db, 'apar_master', did(plant, kode)))).exists()) throw new Error('Kode alat tidak ditemukan di plant tersebut');
+    const id = await nextId('apar_histori', 'TRX', 'id');
+    await setDoc(doc(db, 'apar_histori', id), { id, tgl, plant, kode, jenis, ket, waktu: stamp() });
+    return { ok: true, id };
+  }
+  if (a === 'aparHistDelete') { await deleteDoc(doc(db, 'apar_histori', cl(q.id))); return { ok: true }; }
+  throw new Error('Aksi tidak dikenal: ' + a);
+}
+
+// ---------- kirim checksheet (petugas, tanpa login) ----------
+async function submit(q) {
+  const plant = cl(q.plant), kode = cl(q.kode);
+  if (!plant) throw new Error('Plant tidak diketahui. Buka ulang lewat QR code alat.');
+  const mref = doc(db, 'apar_master', did(plant, kode)), ms = await getDoc(mref);
+  if (!ms.exists()) throw new Error('Kode alat tidak ditemukan di master data');
+  const a = ms.data();
+  const exp = cl(q.exp);
+  if (exp && !isD(exp)) throw new Error('Format tanggal expired tidak valid');
+  if (!exp && !a.exp) throw new Error('Tanggal expired wajib diisi');
+  const tgl = cl(q.tanggal);
+  if (!isD(tgl)) throw new Error('Tanggal tidak valid');
+  const petugas = cl(q.petugas, 100);
+  if (!petugas) throw new Error('Nama petugas wajib diisi');
+  const it = q.items || {}, items = {};
+  ITEMS.forEach(k => { const v = String(it[k] || ''); if (!['OK', 'NG', 'NA'].includes(v)) throw new Error('Semua item pemeriksaan wajib dipilih'); items[k] = v; });
+  let berat = '';
+  if (a.jenis === 'CO2') { const b = parseFloat(q.berat); if (!(b > 0)) throw new Error('Berat (kg) wajib diisi untuk APAR CO2'); berat = String(b); }
+  const bulan = tgl.slice(0, 7), href = doc(db, 'apar_hasil', did(plant, kode, bulan));
+  let updated = false; try { updated = (await getDoc(href)).exists(); } catch (e) {}
+  const expUpdated = !!(exp && exp !== String(a.exp || ''));
+  const b = writeBatch(db);
+  if (expUpdated) b.update(mref, { exp });
+  b.set(href, { bulan, tgl, kode, plant, lokasi: a.lokasi, jenis: a.jenis, kap: String(a.kap ?? ''), items, berat, petugas, catatan: cl(q.catatan, 500), waktu: stamp() });
+  const pr = b.commit(); pr.catch(() => {});
+  const r = await Promise.race([pr.then(() => 'ok'), sleep(8000).then(() => 'queued')]);   // offline: tersimpan di HP, terkirim saat online
+  return { ok: true, updated, bulan, expUpdated, queued: r === 'queued' };
+}
+
+// ---------- impor data lama dari Google Sheets (sekali pakai) ----------
+async function migrate() {
+  await needAdmin();
+  if (!confirm('Impor semua data APAR dari Google Sheets lama ke Firebase?\nProses ini aman diulang (data yang sama tidak digandakan).')) throw cancelled();
+  const get = a => jsonp({ action: a, year: '' }, APAR_OLD_URL).then(x => { if (!x.ok) throw new Error(x.error || 'Gagal membaca Google Sheets lama'); return x.rows; });
+  toast('Membaca data lama…');
+  const [m, h, r] = await Promise.all([get('aparMaster'), get('aparHist'), get('aparResults')]);
+  const base = Date.now(), ops = [];
+  m.forEach((x, i) => ops.push([doc(db, 'apar_master', did(x.plant, x.kode)), { kode: x.kode, plant: x.plant, jenis: x.jenis, kap: String(x.kap ?? ''), lokasi: x.lokasi, exp: x.exp || '', ts: base + i }]));
+  r.forEach(x => ops.push([doc(db, 'apar_hasil', did(x.plant, x.kode, x.bulan)), { bulan: x.bulan, tgl: x.tgl, kode: x.kode, plant: x.plant, lokasi: x.lokasi, jenis: x.jenis, kap: String(x.kap ?? ''), items: x.items, berat: x.berat == null ? '' : String(x.berat), petugas: x.petugas, catatan: x.catatan || '', waktu: '' }]));
+  h.forEach(x => ops.push([doc(db, 'apar_histori', x.id), { id: x.id, tgl: x.tgl, plant: x.plant, kode: x.kode, jenis: x.jenis, ket: x.ket || '', waktu: '' }]));
+  for (let i = 0; i < ops.length; i += 400) {
+    const b = writeBatch(db); ops.slice(i, i + 400).forEach(([ref, d]) => b.set(ref, d));
+    toast('Mengimpor ' + Math.min(i + 400, ops.length) + ' / ' + ops.length + '…'); await b.commit();
+  }
+  return { master: m.length, hasil: r.length, histori: h.length };
+}
+
+window.FBA = {
+  read, write, submit,
+  user: () => auth.currentUser,
+  logout: async () => { await signOut(auth); toast('Admin keluar'); },
+  migrate
+};
+window.aparMigrate = async () => {
+  try {
+    const n = await FBA.migrate(); cclear();
+    alert('Impor selesai: ' + n.master + ' alat, ' + n.hasil + ' hasil checksheet, ' + n.histori + ' histori.');
+    loadApar();
+  } catch (e) { if (!(e && e.cancelled)) { tst.hidden = true; alert('Impor gagal: ' + (e.message || e)); } }
+};
+window.__fbaOk(window.FBA);
 </script>
 </body>
 </html>
