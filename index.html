@@ -2085,8 +2085,8 @@ const firebaseConfig = {
   messagingSenderId: "24442447235",
   appId: "1:24442447235:web:3cac8ae50476a5c989c2b6"
 };
-// Pemilik: akun dengan email ini otomatis menjadi username "admin" dengan role Admin (1) (harus sama dengan firestore-auth.rules)
-const OWNER_EMAIL = 'stevanus.aldy@gmail.com';
+// Pemilik: akun dengan email ini otomatis menjadi username "infra" dengan role Admin (1) (harus sama dengan firestore-auth.rules)
+const OWNER_EMAIL = 'stefanus.atmaja@aop.component.astra.co.id', OWNER_USER = 'infra', RESERVED = ['admin', 'infra'];
 
 if (/^ISI/.test(firebaseConfig.apiKey)) {
   window.AUTHX = { enabled: false };   // belum dikonfigurasi: website berjalan tanpa login
@@ -2104,7 +2104,7 @@ if (/^ISI/.test(firebaseConfig.apiKey)) {
     if (c.includes('invalid-email')) return 'Format email tidak valid.';
     if (c.includes('too-many-requests')) return 'Terlalu banyak percobaan. Coba lagi beberapa menit lagi.';
     if (c.includes('network')) return 'Tidak ada koneksi internet.';
-    if (c.includes('operation-not-allowed')) return 'Metode login Email/Password belum diaktifkan di Firebase Authentication.';
+    if (c.includes('operation-not-allowed') || c.includes('configuration-not-found')) return 'Authentication belum diaktifkan di project Firebase login. Buka Authentication > Get started > Sign-in method > Email/Password > Enable > Save.';
     if (c.includes('permission-denied') || /insufficient permissions/i.test(e && e.message || '')) return 'Ditolak oleh aturan database. Pastikan firestore-auth.rules sudah di-Publish.';
     return (e && e.message) || 'Terjadi kesalahan.';
   };
@@ -2121,8 +2121,8 @@ if (/^ISI/.test(firebaseConfig.apiKey)) {
     if (!s.exists()) {
       if (norm(user.email) !== OWNER_EMAIL) return null;
       const b = writeBatch(db);   // pemilik pertama kali masuk: buat profil Role 1
-      b.set(r, { username: 'admin', email: norm(user.email), role: 1, createdAt: Date.now() });
-      b.set(doc(db, 'usernames', 'admin'), { uid: user.uid, email: norm(user.email) });
+      b.set(r, { username: OWNER_USER, email: norm(user.email), role: 1, createdAt: Date.now() });
+      b.set(doc(db, 'usernames', OWNER_USER), { uid: user.uid, email: norm(user.email) });
       await b.commit(); s = await getDoc(r);
     }
     return { uid: user.uid, ...s.data() };
@@ -2147,9 +2147,9 @@ if (/^ISI/.test(firebaseConfig.apiKey)) {
       await signInWithEmailAndPassword(auth, email, pw);
     }),
     register: wrap(async ({ username, email, password, password2 }) => {
-      const e = norm(email), owner = e === OWNER_EMAIL, un = owner ? 'admin' : norm(username);
+      const e = norm(email), owner = e === OWNER_EMAIL, un = owner ? OWNER_USER : norm(username);
       if (!UN.test(un)) fail('Username 3–20 karakter: huruf kecil, angka, titik, garis bawah, atau strip.');
-      if (un === 'admin' && !owner) fail('Username "admin" tidak tersedia.');
+      if (RESERVED.includes(un) && !owner) fail('Username "' + un + '" tidak tersedia.');
       if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e)) fail('Format email tidak valid.');
       if (String(password || '').length < 6) fail('Password minimal 6 karakter.');
       if (password !== password2) fail('Ulangi password tidak sama.');
