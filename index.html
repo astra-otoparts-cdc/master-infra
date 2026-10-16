@@ -1768,7 +1768,7 @@ function showGate(note,isErr){
   const body=gMode==='register'?f('g_u','Username','text','huruf kecil, angka, . _ -','username')+f('g_e','Email','email','nama@perusahaan.com','email')+`<label class="lb">Departemen</label><select id="g_t"><option value="">— Pilih departemen —</option>${PICS.map(t=>`<option value="${t}">${t}</option>`).join('')}</select>`+f('g_p','Password (min. 6 karakter)','password','','new-password')+f('g_p2','Ulangi password','password','','new-password')
     :gMode==='forgot'?f('g_u','Username atau email','text','','username')
     :f('g_u','Username atau email','text','','username')+f('g_p','Password','password','','current-password');
-  const sub=gMode==='register'?'Buat akun baru (role awal: User)':gMode==='forgot'?'Lupa password: link reset dikirim ke email akun':'';
+  const sub=gMode==='register'?'Buat akun baru (Infra otomatis Staff, departemen lain User)':gMode==='forgot'?'Lupa password: link reset dikirim ke email akun':'';
   const btn=gMode==='register'?'Daftar':gMode==='forgot'?'Kirim link reset':'Masuk';
   const links=gMode==='login'?`<a onclick="gSet('forgot')">Lupa password?</a><a onclick="gSet('register')">Daftar akun baru</a>`:gMode==='register'?`<a onclick="gSet('login')">Sudah punya akun? Masuk</a>`:`<a onclick="gSet('login')">← Kembali ke login</a>`;
   g.innerHTML=`<div class="gcard"><div class="glogo"><img src="${LOGO_LIGHT}" alt="Astra Otoparts"></div><h2>Logistics &amp; Procurement<br>Master Data Infra</h2><div class="gsub">${sub}</div>${body}<div id="g_msg" class="gmsg ${isErr?'err':'ok'}">${esc(note||'')}</div><button class="p gbtn" id="g_btn" onclick="gateSubmit()">${btn}</button><div class="glinks">${links}</div></div>`;
@@ -1865,7 +1865,7 @@ function renderSetting(){
 <b>Admin</b>: akses penuh, mengelola semua akun.<br>
 <b>Pimpinan</b>: melihat master data dan Setting, tanpa hapus data.<br>
 <b>Staff</b>: tanpa hapus data, master data, dan Setting.<br>
-<b>User</b>: hanya melihat halaman Feedback Temuan untuk departemennya (Warehouse, Lokal proses, TMCC, Quality, Infra, atau Security): mengisi due date dan status progress/selesai. Akun baru otomatis User; Admin dapat menaikkan rolenya.<br>
+<b>User</b>: hanya melihat halaman Feedback Temuan untuk departemennya (Warehouse, Lokal proses, TMCC, Quality, Infra, atau Security): mengisi due date dan status progress/selesai. Akun baru otomatis User, kecuali yang mendaftar di departemen Infra otomatis Staff. Admin dapat mengubah rolenya.<br>
 <div class="l" style="margin-top:8px">Password tidak ditampilkan karena Firebase hanya menyimpannya terenkripsi. Bila ada yang lupa password (termasuk admin), klik <b>Kirim reset password</b>: link ganti password dikirim ke email akun tersebut. Hapus akun mencabut akses akun dari website; catatan loginnya bisa dihapus penuh di Firebase Console &gt; Authentication.</div></div>`;
   view.innerHTML=h;
 }
@@ -2214,7 +2214,7 @@ if (/^ISI/.test(firebaseConfig.apiKey)) {
         const cred = await createUserWithEmailAndPassword(auth, e, password);
         try {
           const b = writeBatch(db);
-          b.set(doc(db, 'users', cred.user.uid), owner ? { username: un, email: e, role: 1, createdAt: Date.now() } : { username: un, email: e, role: 4, tim, createdAt: Date.now() });
+          b.set(doc(db, 'users', cred.user.uid), owner ? { username: un, email: e, role: 1, createdAt: Date.now() } : { username: un, email: e, role: tim === 'Infra' ? 3 : 4, tim, createdAt: Date.now() });
           b.set(doc(db, 'usernames', un), { uid: cred.user.uid, email: e });
           await b.commit();
         } catch (err) { try { await delAuthUser(cred.user); } catch (_) {} throw err; }
