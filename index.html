@@ -142,7 +142,7 @@ stokcs:{g:'Consumable',t:'Stok Consumable',c:[['Kode Barang'],['Nama Barang'],['
 };
 // Menu induk (buka/tutup submenu tanpa pindah halaman)
 const SUBS={Safety:[['checksheet','Checksheet'],['patrol','Safety Patrol']]},PL={checksheet:'Checksheet',patrol:'Safety Patrol'};
-const ALL={apar:{g:'Safety',parent:'checksheet',s:'APAR',t:'Checksheet APAR'},hydrant:{g:'Safety',parent:'checksheet',s:'Hydrant',t:'Checksheet Hydrant'},...P,leader:{g:'Safety',parent:'patrol',s:'Leader',t:'Leader'}};
+const ALL={apar:{g:'Safety',parent:'checksheet',s:'APAR',t:'Checksheet APAR'},hydrant:{g:'Safety',parent:'checksheet',s:'Hydrant',t:'Checksheet Hydrant'},...P,stok:{g:'Consumable',t:'Stok Level Consumable'},leader:{g:'Safety',parent:'patrol',s:'Leader',t:'Leader'}};
 const GRP=['Legal','Safety','Building','Maintenance','Consumable'],ICON={Legal:'⚖️',Safety:'🧯',Building:'🏢',Maintenance:'🔧',Consumable:'📦'};
 const TEAMS=[1,2,3,4,5],STOP=['A','B','C','D','E','F','O'],KAT=['Ringkas','Rapi','Resik'],RISK=['A','B','C'];
 const today=new Date().toLocaleDateString('sv-SE');
@@ -158,6 +158,7 @@ const SHEET_ID='10yxuxmay6aQ8Gx01videkRj0roRK6iNHfPtZgRtUvfg',SHEET_TAB='Form Re
 const SHEET_URL='https://docs.google.com/spreadsheets/d/'+SHEET_ID+'/edit?usp=sharing';
 // ===== KONFIGURASI =====
 // Tempel URL Web App Apps Script (hasil Deploy dari Code.gs) di antara tanda kutip agar Edit/Hapus/Member/Zona tersimpan ke Google Sheets.
+const STOK_SCRIPT_URL='';   // Apps Script TERPISAH khusus Stok Level Consumable (tempel Web App URL dari Code-Stok.gs)
 const APPS_SCRIPT_URL='https://script.google.com/macros/s/AKfycbw7k7iV_hUFEBDknFy_l-FUUkIqpxXfxWLVnqqQ39f393LscRFk5onWsC_0xKHzH_1B/exec';   // Safety Patrol (spreadsheet temuan)
 const HYDRANT_SCRIPT_URL='firebase:hydrant';   // Checksheet Hydrant kini memakai Firebase (project terpisah), lihat blok script module kedua di bagian bawah file
 const APAR_SCRIPT_URL='firebase:apar';   // Checksheet APAR kini memakai Firebase (Firestore), lihat blok script module di bagian bawah file
@@ -243,6 +244,7 @@ function nav(){
   for(const g of GRP){
     h+=`<div class="grp">${ICON[g]} ${g}</div>`;
     for(const k in P)if(P[k].g===g&&!P[k].parent)h+=a(k,P[k].t);
+    if(g==='Consumable')h+=a('stok',ALL.stok.t);
     for(const [sk,st] of (SUBS[g]||[])){
       h+=`<a onclick="subOpen['${sk}']=!subOpen['${sk}'];nav()">${st}<span class="car">${subOpen[sk]?'▾':'▸'}</span></a>`;
       if(subOpen[sk])h+=`<div class="sub">${Object.keys(ALL).filter(k=>ALL[k].parent===sk).map(k=>a(k,ALL[k].s||ALL[k].t)).join('')}</div>`;
@@ -257,11 +259,12 @@ function render(){
     let h='';
     for(const g of GRP){h+=`<h3>${ICON[g]} ${g}</h3><div class="cards" style="margin-bottom:20px">`;
       for(const k in ALL)if(ALL[k].g===g){
-        const isL=k==='leader',n=isL?(SH?SH.length:'…'):k==='apar'?(AM?AM.length:'…'):k==='hydrant'?(YM?YM.length:'…'):D[k].length,al=isL?(SH?SH.filter(r=>r.risk==='A').length:0):k==='apar'?(AM?AM.filter(r=>expState(r)==='bad').length:0):k==='hydrant'?0:D[k].filter(r=>cls(r[r.length-1])==='bad').length;
+        const isL=k==='leader',n=k==='stok'?(STK?(STK.exists?'✓':'–'):'…'):isL?(SH?SH.length:'…'):k==='apar'?(AM?AM.length:'…'):k==='hydrant'?(YM?YM.length:'…'):D[k].length,al=k==='stok'?0:isL?(SH?SH.filter(r=>r.risk==='A').length:0):k==='apar'?(AM?AM.filter(r=>expState(r)==='bad').length:0):k==='hydrant'?0:D[k].filter(r=>cls(r[r.length-1])==='bad').length;
         h+=`<div class="card k" onclick="go('${k}')"><div class="n">${n}</div><div class="l">${isL?'Temuan Safety Patrol (Leader)':ALL[k].t}</div><div class="l" style="color:var(--r);margin-top:4px">${al?al+(isL?' risiko rank A':' perlu perhatian'):'&nbsp;'}</div></div>`}
       h+='</div>'}
     view.innerHTML=h;return}
   if(cur==='fb')return renderFB();
+  if(cur==='stok')return renderStok();
   if(cur==='setting')return renderSetting();
   const p=ALL[cur];title.textContent=cur==='leader'?'Leader - Safety Patrol':p.t;
   crumb.textContent='Master Data Infra › '+p.g+(p.parent?' › '+PL[p.parent]:'');
@@ -1797,7 +1800,7 @@ async function startGate(){
 }
 function bootApp(){
   if(!canMaster()){if(aTab==='master')aTab='hasil';if(yTab==='master')yTab='hasil'}
-  nav();render();loadSheet();loadFB();loadZones();loadInfo();loadPlants();loadAparMaster();loadHydMaster();if(cur==='apar')loadAparResults();if(cur==='hydrant')loadHydResults()}
+  nav();render();loadSheet();loadFB();loadStok();loadZones();loadInfo();loadPlants();loadAparMaster();loadHydMaster();if(cur==='apar')loadAparResults();if(cur==='hydrant')loadHydResults()}
 
 
 // ---------- halaman Feedback Temuan (role User) ----------
@@ -1841,6 +1844,48 @@ function fbEdit(n){const x=VR[n],tim=ME.tim,f=x.fb&&x.fb[tim];
       if(!v[0]){alert('Due date wajib diisi.');return false}
       try{await AUTHX.fbSet(fbId(x,tim),{key:x.key,tim,due:v[0],status:v[1],note:v[2]})}catch(e){alert('Gagal menyimpan: '+e.message);return false}
       FB=(FB||[]).filter(z=>!(z.key===x.key&&z.tim===tim));FB.push({key:x.key,tim,due:v[0],status:v[1],note:v[2],by:ME.username,at:Date.now()});applyFB();toast('Feedback tersimpan ✓')},false)}
+
+
+// ---------- Stok Level Consumable (upload Excel ke folder Google Drive) ----------
+let STK=null,stkErr='',stkBusy=false;
+function loadStok(){
+  if(!STOK_SCRIPT_URL){stkErr='URL Apps Script Stok Level Consumable belum diisi di index.html (STOK_SCRIPT_URL). Lihat petunjuk di Code-Stok.gs.';if(cur==='stok')render();return}
+  jsonp({action:'stokInfo'},STOK_SCRIPT_URL).then(j=>{if(!j||!j.ok)throw new Error((j&&j.error)||'Gagal membaca info file.');STK=j;stkErr=''})
+    .catch(e=>{stkErr=e.message;STK=STK||null}).finally(()=>{if(cur==='stok')render()})}
+const stkSize=n=>n>=1048576?(n/1048576).toFixed(1)+' MB':Math.max(1,Math.round(n/1024))+' KB';
+const stkTime=ms=>new Date(ms).toLocaleString('id-ID',{day:'numeric',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'}).replace('.',':');
+function renderStok(){
+  title.textContent='Stok Level Consumable';crumb.textContent='Master Data Infra › Consumable';
+  let h=`<div class="tools"><button class="sm" onclick="STK=null;stkErr='';loadStok();render()">↻ Muat ulang</button></div>`;
+  if(stkErr)h+=`<div class="card empty" style="color:var(--r);margin-bottom:12px">${esc(stkErr)}</div>`;
+  if(!STK&&!stkErr)h+='<div class="card empty">Memuat info file…</div>';
+  else if(STK){
+    h+=STK.exists
+      ?`<div class="card info"><div><div class="l" style="margin-bottom:4px">File saat ini</div><b>📄 ${esc(STK.name)}</b><div class="l" style="margin-top:4px">${stkSize(STK.size)}</div></div>
+        <div><div class="l" style="margin-bottom:4px">Last updated</div><b>${stkTime(STK.updated)}</b>${STK.by?`<div class="l" style="margin-top:4px">oleh ${esc(STK.by)}</div>`:''}</div>
+        <div><a class="btnl p" href="${esc(STK.url)}" target="_blank" rel="noopener">Buka / unduh file</a></div></div>`
+      :'<div class="card empty" style="margin-bottom:12px">Belum ada file. Upload file Excel pertama di bawah.</div>'}
+  h+=`<div class="card" style="margin-top:12px"><b>Upload file baru</b>
+    <div class="l" style="margin:4px 0 10px">Format .xlsx, .xls, .xlsm atau .csv. File lama otomatis dihapus (dipindah ke Sampah Google Drive) dan diganti file yang baru.</div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center"><input type="file" id="stk_f" accept=".xlsx,.xls,.xlsm,.csv" style="max-width:340px"><button class="p" id="stk_b" onclick="stokUp()"${stkBusy?' disabled':''}>${stkBusy?'Mengunggah…':'Upload'}</button></div></div>`;
+  view.innerHTML=h}
+async function stokUp(){
+  const inp=document.getElementById('stk_f'),f=inp&&inp.files[0];
+  if(!f){alert('Pilih file Excel terlebih dahulu.');return}
+  if(!/\.(xlsx|xlsm|xls|csv)$/i.test(f.name)){alert('File harus berformat Excel (.xlsx, .xls, .xlsm) atau .csv');return}
+  if(f.size>25*1048576){alert('File terlalu besar (maksimal 25 MB).');return}
+  if(STK&&STK.exists&&!confirm('File "'+STK.name+'" akan dihapus dan diganti dengan "'+f.name+'".\nLanjutkan?'))return;
+  if(!STOK_SCRIPT_URL){alert('URL Apps Script Stok Level Consumable belum diisi di index.html (STOK_SCRIPT_URL).');return}
+  const pin=getPin('mi_pin_stok');if(!pin)return;
+  stkBusy=true;render();toast('Mengunggah ke Google Drive…');
+  try{
+    const b64=await new Promise((ok,no)=>{const r=new FileReader();r.onload=()=>ok(String(r.result).split(',')[1]||'');r.onerror=()=>no(new Error('Gagal membaca file.'));r.readAsDataURL(f)});
+    const res=await fetch(STOK_SCRIPT_URL,{method:'POST',mode:'cors',redirect:'follow',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'stokUpload',name:f.name,b64,by:ME?(ME.nama||ME.username):'',pin})});
+    const j=await res.json();
+    if(!j.ok){if(j.error==='PIN'){try{sessionStorage.removeItem('mi_pin_stok')}catch(e){}throw new Error('PIN salah.')}throw new Error(j.error||'Gagal mengunggah')}
+    STK=j;stkErr='';toast('File berhasil diunggah ✓')
+  }catch(e){tst.hidden=true;alert('Gagal mengunggah: '+e.message+(e instanceof TypeError?'\nPeriksa URL Apps Script dan pastikan Code.gs sudah di-deploy versi terbaru.':''))}
+  stkBusy=false;if(cur==='stok')render()}
 
 // ---------- halaman Setting (kelola akun) ----------
 async function loadUsers(){if(usLoading)return;usLoading=true;
