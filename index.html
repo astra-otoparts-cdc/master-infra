@@ -1893,7 +1893,7 @@ async function stokUp(){
 
 // ---------- MoU / Kerjasama (database + file di folder Google Drive, lewat Apps Script terpisah) ----------
 let MOU=null,mouErr='',mouQ='',mouPl='',mouSt='',mouBusy=false,MOU_DB='';
-const MOU_WARN=90;   // "Akan habis" bila sisa waktu <= 90 hari
+const MOU_WARN=30;   // "Akan habis" bila sisa waktu <= 30 hari
 const MOU_ST=['Aktif','Akan habis','Habis','Tidak berlaku'];
 function mouStat(x){
   if(x.manual==='Tidak berlaku')return 'Tidak berlaku';
