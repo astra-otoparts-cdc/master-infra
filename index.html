@@ -135,7 +135,7 @@ body.r2 .dl,body.r3 .dl,body.r4 .dl{display:none!important}
 const S=['Aktif','Akan Habis','Expired'],K=['Baik','Perlu Perbaikan','Rusak'];
 const P={
 perijinan:{g:'Legal',t:'Perijinan',c:[['Nama Perijinan'],['No. Dokumen'],['Tgl Terbit','date'],['Masa Berlaku','date'],['Status','sel',S]],d:[['IMB / PBG Gedung A','PBG-0123/2023','2023-03-10','2033-03-10','Aktif'],['Izin Lingkungan (UKL-UPL)','UKL-221/2022','2022-06-01','2026-12-01','Akan Habis'],['Sertifikat Laik Fungsi','SLF-045/2021','2021-01-15','2026-01-15','Expired']]},
-sop:{g:'Legal',t:'SOP',c:[['Judul SOP'],['No. SOP'],['Revisi'],['Tgl Berlaku','date'],['Status','sel',['Berlaku','Review','Kadaluarsa']]],d:[['SOP Tanggap Darurat Kebakaran','SOP-HSE-001','Rev 02','2025-02-01','Berlaku'],['SOP Pemeliharaan Bangunan','SOP-ENG-007','Rev 01','2024-08-20','Review']]},
+sop:{g:'Legal',t:'SOP/IK',c:[['Judul SOP'],['No. SOP'],['Revisi'],['Tgl Berlaku','date'],['Status','sel',['Berlaku','Review','Kadaluarsa']]],d:[['SOP Tanggap Darurat Kebakaran','SOP-HSE-001','Rev 02','2025-02-01','Berlaku'],['SOP Pemeliharaan Bangunan','SOP-ENG-007','Rev 01','2024-08-20','Review']]},
 sio:{g:'Legal',t:'SIO',c:[['Nama Operator'],['Jenis SIO'],['No. SIO'],['Masa Berlaku','date'],['Status','sel',S]],d:[['Budi Santoso','Operator Forklift','SIO-F-8891','2027-04-30','Aktif'],['Andi Wijaya','Operator Crane','SIO-C-1120','2026-11-10','Akan Habis']]},
 mou:{g:'Legal',t:'MoU / Kerjasama',c:[['Pihak Kerjasama'],['Ruang Lingkup'],['No. MoU'],['Berakhir','date'],['Status','sel',S]],d:[['PT Sinar Teknik','Maintenance Gedung','MoU-2024/012','2027-01-31','Aktif'],['Dinas Pemadam Kebakaran','Pelatihan & Inspeksi','MoU-2023/044','2026-10-31','Akan Habis']]},
 pic:{g:'Safety',parent:'patrol',s:'PIC',t:'PIC',c:[['Nama PIC'],['Area Tanggung Jawab'],['No. HP'],['Status','sel',['Aktif','Nonaktif']]],d:[['Agus','Workshop','0812-0000-0001','Aktif'],['Siti','Gudang A','0812-0000-0002','Aktif'],['Rudi','Area Parkir','0812-0000-0003','Aktif']]},
@@ -2051,7 +2051,7 @@ async function mouDel(i){
   MOU=MOU.filter(z=>z.id!==x.id);render()}
 
 // ---------- Perijinan dan SOP (pakai Apps Script yang sama dengan MoU, dibedakan per sheet) ----------
-const DOC={perijinan:{t:'Perijinan',pre:'per',rows:null,err:'',q:'',pl:'',st:''},sop:{t:'SOP',pre:'sop',rows:null,err:'',q:'',pl:'',st:''}};
+const DOC={perijinan:{t:'Perijinan',pre:'per',rows:null,err:'',q:'',pl:'',st:''},sop:{t:'SOP/IK',pre:'sop',rows:null,err:'',q:'',pl:'',st:''}};
 const SOP_ST=['Berlaku','Tidak berlaku'];
 const docStat=(k,x)=>k==='sop'?(x.status||'Berlaku'):mouStat(x);
 const docCls=(k,st)=>k==='sop'?(st==='Berlaku'?'good':'neu'):mouCls(st);
@@ -2074,33 +2074,33 @@ function renderDoc(k){
   const all=d.rows.map((x,i)=>({...x,st:docStat(k,x),_i:i})),cnt=s=>all.filter(x=>x.st===s).length;
   const plants=[...new Set([...docPlants(),...all.map(x=>x.plant).filter(Boolean)])];
   const qq=d.q.toLowerCase();
-  const rows=all.filter(x=>(sop||!d.pl||x.plant===d.pl)&&(!d.st||x.st===d.st)&&(!qq||(sop?[x.nama,x.jenis,x.no]:[x.plant,x.jenis,x.nama,x.no]).join(' ').toLowerCase().includes(qq))).sort((a,b)=>b._i-a._i);
+  const rows=all.filter(x=>(!d.pl||(sop?x.peraturan:x.plant)===d.pl)&&(!d.st||x.st===d.st)&&(!qq||(sop?[x.peraturan,x.nama,x.jenis,x.no]:[x.plant,x.jenis,x.nama,x.no]).join(' ').toLowerCase().includes(qq))).sort((a,b)=>b._i-a._i);
   const tot=all.length-cnt('Tidak berlaku');
   h+=`<div class="cards" style="margin-bottom:14px"><div class="card k"><div class="n">${tot}</div><div class="l">Total ${d.t}</div></div>${sts.map(s=>`<div class="card k" onclick="docSet('${k}','st','${d.st===s?'':s}')"><div class="n">${cnt(s)}</div><div class="l">${s}</div></div>`).join('')}</div>`;
-  h+=`<div class="tools"><input class="s" style="max-width:300px" placeholder="Cari ${sop?'nama / nomor SOP':'nama / nomor perijinan'}..." value="${esc(d.q)}" oninput="DOC['${k}'].q=this.value;rs(this)">
-    ${sop?'':`<select style="width:auto;min-width:150px" onchange="docSet('${k}','pl',this.value)"><option value="">Semua Plant</option>${plants.map(p=>`<option${p===d.pl?' selected':''}>${esc(p)}</option>`).join('')}</select>`}
+  h+=`<div class="tools"><input class="s" style="max-width:300px" placeholder="Cari ${sop?'nama / nomor SOP/IK':'nama / nomor perijinan'}..." value="${esc(d.q)}" oninput="DOC['${k}'].q=this.value;rs(this)">
+    <select style="width:auto;min-width:150px" onchange="docSet('${k}','pl',this.value)"><option value="">${sop?'Semua peraturan':'Semua Plant'}</option>${(sop?['SOP','IK']:plants).map(p=>`<option${p===d.pl?' selected':''}>${esc(p)}</option>`).join('')}</select>
     <select style="width:auto;min-width:150px" onchange="docSet('${k}','st',this.value)"><option value="">Semua status</option>${sts.map(s=>`<option${s===d.st?' selected':''}>${s}</option>`).join('')}</select>
     <button class="sm" onclick="DOC['${k}'].rows=null;DOC['${k}'].err='';loadDoc('${k}');render()">↻ Muat ulang</button>
     <button class="p" onclick="docEdit('${k}',-1)">+ Tambah</button></div>`;
   window.DV=window.DV||{};window.DV[k]=rows;
-  const heads=sop?['NAMA SOP','JENIS SOP','NOMOR SOP','STATUS','FILE']:['PLANT','JENIS PERIJINAN','NAMA PERIJINAN','NOMOR PERIJINAN','MASA BERLAKU','STATUS','FILE'];
+  const heads=sop?['PERATURAN','NAMA','JENIS','NOMOR','STATUS','FILE']:['PLANT','JENIS PERIJINAN','NAMA PERIJINAN','NOMOR PERIJINAN','MASA BERLAKU','STATUS','FILE'];
   h+=`<div class="wrap"><table><thead><tr>${heads.map(x=>`<th>${x}</th>`).join('')}<th></th></tr></thead><tbody>`;
   rows.forEach((x,i)=>{
     const f=x.fileUrl?`<a href="${esc(x.fileUrl)}" target="_blank" rel="noopener" title="${esc(x.fileName)}">📎 Buka file</a>`:'<span class="l">-</span>',b=`<span class="b ${docCls(k,x.st)}">${x.st}</span>`;
-    h+='<tr>'+(sop?`<td><b>${esc(x.nama)}</b></td><td>${esc(x.jenis)}</td><td>${esc(x.no)}</td><td>${b}</td><td>${f}</td>`
+    h+='<tr>'+(sop?`<td>${esc(x.peraturan)}</td><td><b>${esc(x.nama)}</b></td><td>${esc(x.jenis)}</td><td>${esc(x.no)}</td><td>${b}</td><td>${f}</td>`
       :`<td>${esc(x.plant)}</td><td>${esc(x.jenis)}</td><td><b>${esc(x.nama)}</b></td><td>${esc(x.no)}</td><td>${x.exp?fmtD(x.exp):'-'}</td><td>${b}</td><td>${f}</td>`)
       +`<td><button class="sm" onclick="docEdit('${k}',${i})">Edit</button> <button class="sm dl" onclick="docDel('${k}',${i})">Hapus</button></td></tr>`});
   if(!rows.length)h+=`<tr><td colspan="${heads.length+1}" class="empty">${all.length?'Tidak ada data pada filter ini':'Belum ada data '+d.t+'. Klik + Tambah.'}</td></tr>`;
-  view.innerHTML=h+'</tbody></table></div>'+(sop?'<div class="l" style="margin-top:8px">Status SOP dipilih manual: Berlaku atau Tidak berlaku. SOP "Tidak berlaku" tidak dihitung ke Total SOP.</div>':'<div class="l" style="margin-top:8px">Plant "All" untuk perijinan yang berlaku di semua plant. Status otomatis dari masa berlaku: Aktif, Akan habis (sisa ≤ '+MOU_WARN+' hari), Habis (lewat masa berlaku). "Tidak berlaku" dipilih manual dan tidak dihitung ke Total. Masa berlaku boleh dikosongkan bila tidak ada batas waktu.</div>')}
+  view.innerHTML=h+'</tbody></table></div>'+(sop?'<div class="l" style="margin-top:8px">Peraturan: SOP atau IK. Status dipilih manual: Berlaku atau Tidak berlaku. Yang "Tidak berlaku" tidak dihitung ke Total.</div>':'<div class="l" style="margin-top:8px">Plant "All" untuk perijinan yang berlaku di semua plant. Status otomatis dari masa berlaku: Aktif, Akan habis (sisa ≤ '+MOU_WARN+' hari), Habis (lewat masa berlaku). "Tidak berlaku" dipilih manual dan tidak dihitung ke Total. Masa berlaku boleh dikosongkan bila tidak ada batas waktu.</div>')}
 function docEdit(k,i){
   const d=DOC[k],sop=k==='sop',x=i>=0?window.DV[k][i]:null;
   const fl=['File '+d.t+' (PDF/Word/Excel/gambar)'+(x&&x.fileName?' - sekarang: '+esc(x.fileName)+' (kosongkan bila tidak diganti)':''),'file'];
   const AUTO='Otomatis (dari masa berlaku)';
-  const cols=sop?[['Nama SOP'],['Jenis SOP'],['Nomor SOP'],['Status','sel',SOP_ST],fl]
+  const cols=sop?[['Peraturan','sel',['SOP','IK']],['Nama'],['Jenis'],['Nomor'],['Status','sel',SOP_ST],fl]
     :[x?['Plant','sel',docPlants().includes(x.plant)?docPlants():[...docPlants(),x.plant]]:['Plant (boleh pilih lebih dari satu)','chk',docPlants()],['Jenis Perijinan'],['Nama Perijinan'],['Nomor Perijinan'],['Masa Berlaku (kosongkan bila tidak ada batas)','date'],['Status','sel',[AUTO,'Tidak berlaku']],fl];
-  const vals=sop?(x?[x.nama,x.jenis,x.no,x.status,'']:['','','','Berlaku','']):(x?[x.plant,x.jenis,x.nama,x.no,x.exp,x.manual==='Tidak berlaku'?'Tidak berlaku':AUTO,'']:[[],'','','','',AUTO,'']);
+  const vals=sop?(x?[x.peraturan||'SOP',x.nama,x.jenis,x.no,x.status,'']:['SOP','','','','Berlaku','']):(x?[x.plant,x.jenis,x.nama,x.no,x.exp,x.manual==='Tidak berlaku'?'Tidak berlaku':AUTO,'']:[[],'','','','',AUTO,'']);
   dlgOpen((x?'Edit ':'Tambah ')+d.t,cols,vals,async v=>{
-    if(!v[sop?0:2]){alert('Nama '+d.t+' wajib diisi.');return false}
+    if(!v[sop?1:2]){alert('Nama '+d.t+' wajib diisi.');return false}
     const fi=fields.querySelectorAll('.fld')[cols.length-1].querySelector('input'),f=fi&&fi.files[0];let file=null;
     if(f){
       if(!/\.(pdf|docx?|xlsx?|jpe?g|png)$/i.test(f.name)){alert('File harus PDF, Word, Excel, atau gambar (JPG/PNG).');return false}
@@ -2111,7 +2111,7 @@ function docEdit(k,i){
     if(!pls.length||(!sop&&!pls[0])){alert('Pilih minimal satu plant.');return false}
     let ref=null,made=[];
     for(let n=0;n<pls.length;n++){
-      const pay=sop?{action:'sopSave',id:x?x.id:'',nama:v[0],jenis:v[1],no:v[2],status:v[3]}
+      const pay=sop?{action:'sopSave',id:x?x.id:'',peraturan:v[0],nama:v[1],jenis:v[2],no:v[3],status:v[4]}
         :{action:'perSave',id:x?x.id:'',plant:pls[n],jenis:v[1],nama:v[2],no:v[3],exp:v[4],manual:v[5]==='Tidak berlaku'?'Tidak berlaku':''};
       const j=await mouPost({...pay,file:n===0?file:null,fileRef:n>0?ref:null});
       if(!j){if(made.length)alert('Hanya '+made.length+' dari '+pls.length+' plant yang tersimpan ('+made.join(', ')+'). Tambahkan sisanya lagi.');break}
