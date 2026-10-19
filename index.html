@@ -1853,7 +1853,8 @@ function fbEdit(n){const x=VR[n],tim=ME.tim,f=x.fb&&x.fb[tim];
 let STK=null,stkErr='',stkBusy=false;
 function loadStok(){
   if(!STOK_SCRIPT_URL){stkErr='URL Apps Script Stok Level Consumable belum diisi di index.html (STOK_SCRIPT_URL). Lihat petunjuk di Code-Stok.gs.';if(cur==='stok')render();return}
-  jsonp({action:'stokInfo'},STOK_SCRIPT_URL).then(j=>{if(!j||!j.ok)throw new Error((j&&j.error)||'Gagal membaca info file.');STK=j;stkErr=''})
+  // fetch biasa (seperti upload yang sudah berhasil); bila gagal, coba lewat JSONP
+  fetch(STOK_SCRIPT_URL+'?action=stokInfo&_='+Date.now(),{redirect:'follow'}).then(r=>r.json()).catch(()=>jsonp({action:'stokInfo'},STOK_SCRIPT_URL)).then(j=>{if(!j||!j.ok)throw new Error((j&&j.error)||'Gagal membaca info file.');STK=j;stkErr=''})
     .catch(e=>{stkErr=e.message;STK=STK||null}).finally(()=>{if(cur==='stok')render()})}
 const stkSize=n=>n>=1048576?(n/1048576).toFixed(1)+' MB':Math.max(1,Math.round(n/1024))+' KB';
 const stkTime=ms=>new Date(ms).toLocaleString('id-ID',{day:'numeric',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'}).replace('.',':');
