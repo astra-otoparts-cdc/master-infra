@@ -1940,8 +1940,8 @@ function renderMou(){
   view.innerHTML=h+'</tbody></table></div><div class="l" style="margin-top:8px">Status otomatis dari tanggal expired: Aktif, Akan habis (sisa ≤ '+MOU_WARN+' hari), Habis (lewat tanggal expired). "Tidak berlaku" dipilih manual dan tidak dihitung ke Total MoU.</div>'}
 function mouEdit(i){
   const x=i>=0?window.MV2[i]:null;
-  const cols=[['Plant','sel',PLANTS.includes(x&&x.plant)||!x?PLANTS:[...PLANTS,x.plant]],['Ruang Lingkup'],['Nama Vendor'],['Nomor MoU'],['Expired','date'],['Status','sel',['Otomatis (dari tanggal expired)','Tidak berlaku']],['File MoU (PDF/Word/Excel/gambar)'+(x&&x.fileName?' - sekarang: '+esc(x.fileName)+' (kosongkan bila tidak diganti)':''),'file']];
-  dlgOpen((x?'Edit':'Tambah')+' MoU',cols,x?[x.plant,x.scope,x.vendor,x.no,x.exp,x.manual==='Tidak berlaku'?'Tidak berlaku':'Otomatis (dari tanggal expired)',''] : [PLANTS[0],'','','','','',''],
+  const cols=[x?['Plant','sel',PLANTS.includes(x.plant)?PLANTS:[...PLANTS,x.plant]]:['Plant (boleh pilih lebih dari satu)','chk',PLANTS],['Ruang Lingkup'],['Nama Vendor'],['Nomor MoU'],['Expired','date'],['Status','sel',['Otomatis (dari tanggal expired)','Tidak berlaku']],['File MoU (PDF/Word/Excel/gambar)'+(x&&x.fileName?' - sekarang: '+esc(x.fileName)+' (kosongkan bila tidak diganti)':''),'file']];
+  dlgOpen((x?'Edit':'Tambah')+' MoU',cols,x?[x.plant,x.scope,x.vendor,x.no,x.exp,x.manual==='Tidak berlaku'?'Tidak berlaku':'Otomatis (dari tanggal expired)',''] : [[],'','','','','',''],
     async v=>{
       if(!v[2]){alert('Nama vendor wajib diisi.');return false}
       const fi=fields.querySelectorAll('.fld')[6].querySelector('input'),f=fi&&fi.files[0];let file=null;
@@ -1950,9 +1950,16 @@ function mouEdit(i){
         if(f.size>25*1048576){alert('File terlalu besar (maksimal 25 MB).');return false}
         const b64=await new Promise((ok,no)=>{const r=new FileReader();r.onload=()=>ok(String(r.result).split(',')[1]||'');r.onerror=()=>no(new Error('Gagal membaca file.'));r.readAsDataURL(f)});
         file={name:f.name,b64}}
-      const j=await mouPost({action:'mouSave',id:x?x.id:'',plant:v[0],scope:v[1],vendor:v[2],no:v[3],exp:v[4],manual:v[5]==='Tidak berlaku'?'Tidak berlaku':'',file});
-      if(!j)return false;
-      const k=MOU.findIndex(z=>z.id===j.row.id);if(k>=0)MOU[k]=j.row;else MOU.push(j.row)},false)}
+      const pls=Array.isArray(v[0])?v[0]:[v[0]];
+      if(!pls.length||!pls[0]){alert('Pilih minimal satu plant.');return false}
+      let ref=null,made=[];
+      for(let k=0;k<pls.length;k++){
+        const j=await mouPost({action:'mouSave',id:x?x.id:'',plant:pls[k],scope:v[1],vendor:v[2],no:v[3],exp:v[4],manual:v[5]==='Tidak berlaku'?'Tidak berlaku':'',file:k===0?file:null,fileRef:k>0?ref:null});
+        if(!j){if(made.length)alert('Hanya '+made.length+' dari '+pls.length+' plant yang tersimpan ('+made.join(', ')+'). Tambahkan sisanya lagi.');break}
+        if(k===0&&j.row.fileId)ref={id:j.row.fileId,name:j.row.fileName};
+        made.push(pls[k]);
+        const m=MOU.findIndex(z=>z.id===j.row.id);if(m>=0)MOU[m]=j.row;else MOU.push(j.row)}
+      if(made.length<pls.length)return made.length?undefined:false},false)}
 async function mouDel(i){
   if(!canDel())return deny();const x=window.MV2[i];
   if(!confirm('Hapus MoU "'+x.vendor+(x.no?' - '+x.no:'')+'"?\nFile di Google Drive ikut dipindah ke Sampah.'))return;
