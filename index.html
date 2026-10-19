@@ -1919,33 +1919,55 @@ function sdParse(ws,updated){
   const mg=ws['!merges']||[],cov={},span={};
   mg.forEach(m=>{if(m.s.r>R1||m.e.r<R0)return;span[m.s.r+','+m.s.c]={rs:Math.min(m.e.r,R1)-m.s.r+1,cs:m.e.c-m.s.c+1};
     for(let r=m.s.r;r<=Math.min(m.e.r,R1);r++)for(let c=m.s.c;c<=m.e.c;c++)if(r!==m.s.r||c!==m.s.c)cov[r+','+c]=1});
-  let h1='',h2='';
+  const cells=[];
   for(let c=0;c<=lastC;c++)for(const r of [R0,R1]){
     const k=r+','+c;if(cov[k])continue;
-    let t=tx(r,c),a='';const m=span[k];
-    if(m){if(m.rs>1)a+=` rowspan="${m.rs}"`;if(m.cs>1)a+=` colspan="${m.cs}"`}
-    else if(r===R0&&!t&&tx(R1,c)){t=tx(R1,c);cov[R1+','+c]=1;a=' rowspan="2"'}
-    else if(r===R0&&t&&!tx(R1,c)){cov[R1+','+c]=1;a=' rowspan="2"'}
-    else if(r===R1&&!t&&!cov[k]){}
-    const th=`<th${a}>${esc(t)}</th>`;if(r===R0)h1+=th;else h2+=th}
+    let t=tx(r,c),rs=1,cs=1;const m=span[k];
+    if(m){rs=m.rs;cs=m.cs}
+    else if(r===R0&&!t&&tx(R1,c)){t=tx(R1,c);cov[R1+','+c]=1;rs=2}
+    else if(r===R0&&t&&!tx(R1,c)){cov[R1+','+c]=1;rs=2}
+    cells.push({row:r===R0?0:1,c,t,rs,cs})}
+  const labels=[];
+  for(let c=0;c<=lastC;c++){
+    const sub=cells.find(x=>x.row===1&&x.c<=c&&c<x.c+x.cs),par=cells.find(x=>x.row===0&&x.c<=c&&c<x.c+x.cs);
+    labels.push(par&&par.rs===2?par.t:(par&&par.t&&sub&&sub.t&&par.t!==sub.t?par.t+' › '+sub.t:(sub&&sub.t)||(par&&par.t)||'Kolom '+(c+1)))}
   const rows=[];
   for(let r=D0;r<=rg.e.r&&rows.length<5000;r++){const row=[];let any=false;for(let c=0;c<=lastC;c++){const v=tx(r,c);if(v)any=true;row.push(v)}if(any)rows.push(row)}
-  return {updated,stats,h1,h2,rows,cols:lastC+1}}
+  return {updated,stats,cells,labels,rows,cols:lastC+1}}
 const sdNum=v=>/^-?[\d.,]+\s*%?$/.test(v);
+let sdHide=new Set();try{sdHide=new Set(JSON.parse(localStorage.getItem('mi_sd_hide')||'[]'))}catch(e){}
+function sdVis(){const a=[];for(let c=0;c<SD.cols;c++)if(!sdHide.has(c))a.push(c);return a}
+function sdTableHtml(){
+  const vis=sdVis(),vs=new Set(vis);let h1='',h2='';
+  SD.cells.forEach(x=>{let n=0;for(let c=x.c;c<x.c+x.cs;c++)if(vs.has(c))n++;if(!n)return;
+    const th=`<th${x.rs>1?` rowspan="${x.rs}"`:''}${n>1?` colspan="${n}"`:''}>${esc(x.t)}</th>`;if(x.row===0)h1+=th;else h2+=th});
+  return `<table class="sdt"><thead><tr>${h1}</tr><tr>${h2}</tr></thead><tbody id="sd_tb">${sdRowsHtml()}</tbody></table>`}
 function sdRowsHtml(){
-  if(!SD)return '';const q=sdQ.trim().toLowerCase();
+  if(!SD)return '';const q=sdQ.trim().toLowerCase(),vis=sdVis();
   const rows=q?SD.rows.filter(r=>r.join(' ').toLowerCase().includes(q)):SD.rows;
-  return rows.map(r=>'<tr>'+r.map(v=>`<td${sdNum(v)?' class="r"':''}>${esc(v)}</td>`).join('')+'</tr>').join('')||`<tr><td colspan="${SD.cols}" class="empty">Tidak ada data</td></tr>`}
+  return rows.map(r=>'<tr>'+vis.map(c=>`<td${sdNum(r[c])?' class="r"':''}>${esc(r[c])}</td>`).join('')+'</tr>').join('')||`<tr><td colspan="${vis.length||1}" class="empty">Tidak ada data</td></tr>`}
 function sdFilter(el){sdQ=el.value;const tb=document.getElementById('sd_tb');if(tb)tb.innerHTML=sdRowsHtml()}
+function sdSave(){try{localStorage.setItem('mi_sd_hide',JSON.stringify([...sdHide]))}catch(e){}
+  const w=document.getElementById('sd_tw');if(w)w.innerHTML=sdTableHtml();
+  const n=document.getElementById('sd_cn');if(n)n.textContent=sdHide.size?`Kolom (${SD.cols-sdHide.size}/${SD.cols})`:'Kolom'}
+function sdCol(c,on){on?sdHide.delete(c):sdHide.add(c);sdSave()}
+function sdAll(on){sdHide=on?new Set():new Set(SD.labels.map((_,i)=>i));SD.labels.forEach((_,i)=>{const e=document.getElementById('sdc'+i);if(e)e.checked=on});sdSave()}
+function sdPanel(){const p=document.getElementById('sd_pn');if(p)p.style.display=p.style.display==='block'?'none':'block'}
+document.addEventListener('click',e=>{const p=document.getElementById('sd_pn');if(p&&p.style.display==='block'&&!e.target.closest('#sd_cw'))p.style.display='none'});
 function sdHtml(){
   if(!STK||!STK.exists)return '';
   if(sdBusy&&!SD)return '<div class="card empty" style="margin-top:12px">Membaca data dari file Excel…</div>';
   if(sdErr)return `<div class="card empty" style="margin-top:12px;color:var(--r)">${esc(sdErr)}</div>`;
   if(!SD)return '';
+  sdHide=new Set([...sdHide].filter(c=>c<SD.cols));
   return `<div class="cards" style="margin:14px 0">${SD.stats.map(x=>`<div class="card k" style="cursor:default"><div class="n" style="font-size:22px">${esc(x[1])||'-'}</div><div class="l">${esc(x[0])}</div></div>`).join('')}</div>
-  <div class="tools"><input class="s" style="max-width:300px" placeholder="Cari di tabel..." value="${esc(sdQ)}" oninput="sdFilter(this)"><span class="l">${SD.rows.length} baris · sheet "Stock level CON"</span></div>
-  <div class="wrap"><table class="sdt"><thead><tr>${SD.h1}</tr><tr>${SD.h2}</tr></thead><tbody id="sd_tb">${sdRowsHtml()}</tbody></table></div>`}
-
+  <div class="tools"><input class="s" style="max-width:300px" placeholder="Cari di tabel..." value="${esc(sdQ)}" oninput="sdFilter(this)">
+    <span id="sd_cw" style="position:relative"><button class="sm" onclick="sdPanel()" id="sd_cn">${sdHide.size?`Kolom (${SD.cols-sdHide.size}/${SD.cols})`:'Kolom'}</button>
+      <div id="sd_pn" class="card" style="display:none;position:absolute;left:0;top:calc(100% + 6px);z-index:30;width:min(560px,90vw);max-height:360px;overflow:auto;box-shadow:0 8px 24px rgba(0,0,0,.25)">
+        <div style="display:flex;gap:8px;margin-bottom:8px"><button class="sm" onclick="sdAll(true)">Pilih semua</button><button class="sm" onclick="sdAll(false)">Kosongkan</button></div>
+        <div class="chk">${SD.labels.map((l,i)=>`<label><input type="checkbox" id="sdc${i}" ${sdHide.has(i)?'':'checked'} onchange="sdCol(${i},this.checked)"> ${esc(l)}</label>`).join('')}</div></div></span>
+    <span class="l">${SD.rows.length} baris · sheet "Stock level CON"</span></div>
+  <div class="wrap" id="sd_tw">${sdTableHtml()}</div>`}
 
 // ---------- MoU / Kerjasama (database + file di folder Google Drive, lewat Apps Script terpisah) ----------
 let MOU=null,mouErr='',mouQ='',mouPl='',mouSt='',mouBusy=false,MOU_DB='';
