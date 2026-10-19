@@ -1920,42 +1920,42 @@ function renderMou(){
   let h='';
   if(mouErr)h+=`<div class="card empty" style="color:var(--r);margin-bottom:12px">${esc(mouErr)}</div>`;
   if(!MOU){view.innerHTML=h+(mouErr?'':'<div class="card empty">Memuat data MoU…</div>');return}
-  const all=MOU.map(x=>({...x,st:mouStat(x)})),cnt=s=>all.filter(x=>x.st===s).length;
+  const all=MOU.map((x,i)=>({...x,st:mouStat(x),_i:i})),cnt=s=>all.filter(x=>x.st===s).length;
   const plants=[...new Set([...PLANTS,...all.map(x=>x.plant)])];
   const qq=mouQ.toLowerCase();
-  const rows=all.filter(x=>(!mouPl||x.plant===mouPl)&&(!mouSt||x.st===mouSt)&&(!qq||[x.plant,x.scope,x.vendor,x.no].join(' ').toLowerCase().includes(qq)))
-    .sort((a,b)=>(a.exp||'9999').localeCompare(b.exp||'9999'));
+  const rows=all.filter(x=>(!mouPl||x.plant===mouPl)&&(!mouSt||x.st===mouSt)&&(!qq||[x.plant,x.scope,x.vendor].join(' ').toLowerCase().includes(qq)))
+    .sort((a,b)=>b._i-a._i);   // terbaru diisi di paling atas
   h+=`<div class="cards" style="margin-bottom:14px"><div class="card k"><div class="n">${all.length}</div><div class="l">Total MoU</div></div>${MOU_ST.map(s=>`<div class="card k" onclick="mouSt='${mouSt===s?'':s}';render()"><div class="n">${cnt(s)}</div><div class="l">${s}</div></div>`).join('')}</div>`;
-  h+=`<div class="tools"><input class="s" style="max-width:300px" placeholder="Cari vendor, nomor MoU, ruang lingkup..." value="${esc(mouQ)}" oninput="mouQ=this.value;rs(this)">
+  h+=`<div class="tools"><input class="s" style="max-width:300px" placeholder="Cari vendor, ruang lingkup..." value="${esc(mouQ)}" oninput="mouQ=this.value;rs(this)">
     <select style="width:auto;min-width:150px" onchange="mouPl=this.value;render()"><option value="">Semua Plant</option>${plants.map(p=>`<option${p===mouPl?' selected':''}>${esc(p)}</option>`).join('')}</select>
     <select style="width:auto;min-width:150px" onchange="mouSt=this.value;render()"><option value="">Semua status</option>${MOU_ST.map(s=>`<option${s===mouSt?' selected':''}>${s}</option>`).join('')}</select>
-    <button class="sm" onclick="MOU=null;mouErr='';loadMou();render()">↻ Muat ulang</button>${MOU_DB?` <a class="btnl" href="${esc(MOU_DB)}" target="_blank" rel="noopener">Buka database</a>`:''}
+    <button class="sm" onclick="MOU=null;mouErr='';loadMou();render()">↻ Muat ulang</button>
     <button class="p" onclick="mouEdit(-1)">+ Tambah</button></div>`;
   window.MV2=rows;
-  h+=`<div class="wrap"><table><thead><tr><th>NO</th><th>PLANT</th><th>RUANG LINGKUP</th><th>NAMA VENDOR</th><th>NOMOR MOU</th><th>EXPIRED</th><th>STATUS</th><th>FILE</th><th></th></tr></thead><tbody>`;
-  rows.forEach((x,i)=>{h+=`<tr><td class="c">${i+1}</td><td>${esc(x.plant)}</td><td>${esc(x.scope)}</td><td><b>${esc(x.vendor)}</b></td><td>${esc(x.no)}</td><td>${x.exp?fmtD(x.exp):'-'}</td><td><span class="b ${mouCls(x.st)}">${x.st}</span></td>
+  h+=`<div class="wrap"><table><thead><tr><th>NO</th><th>PLANT</th><th>RUANG LINGKUP</th><th>NAMA VENDOR</th><th>EXPIRED</th><th>STATUS</th><th>FILE</th><th></th></tr></thead><tbody>`;
+  rows.forEach((x,i)=>{h+=`<tr><td class="c">${i+1}</td><td>${esc(x.plant)}</td><td>${esc(x.scope)}</td><td><b>${esc(x.vendor)}</b></td><td>${x.exp?fmtD(x.exp):'-'}</td><td><span class="b ${mouCls(x.st)}">${x.st}</span></td>
     <td>${x.fileUrl?`<a href="${esc(x.fileUrl)}" target="_blank" rel="noopener" title="${esc(x.fileName)}">📎 Buka file</a>`:'<span class="l">-</span>'}</td>
     <td><button class="sm" onclick="mouEdit(${i})">Edit</button> <button class="sm dl" onclick="mouDel(${i})">Hapus</button></td></tr>`});
-  if(!rows.length)h+=`<tr><td colspan="9" class="empty">${all.length?'Tidak ada data pada filter ini':'Belum ada data MoU. Klik + Tambah.'}</td></tr>`;
+  if(!rows.length)h+=`<tr><td colspan="8" class="empty">${all.length?'Tidak ada data pada filter ini':'Belum ada data MoU. Klik + Tambah.'}</td></tr>`;
   view.innerHTML=h+'</tbody></table></div><div class="l" style="margin-top:8px">Status otomatis dari tanggal expired: Aktif, Akan habis (sisa ≤ '+MOU_WARN+' hari), Habis (lewat tanggal expired). "Tidak berlaku" dipilih manual.</div>'}
 function mouEdit(i){
   const x=i>=0?window.MV2[i]:null;
-  const cols=[['Plant','sel',PLANTS.includes(x&&x.plant)||!x?PLANTS:[...PLANTS,x.plant]],['Ruang Lingkup'],['Nama Vendor'],['Nomor MoU'],['Expired','date'],['Status','sel',['Otomatis (dari tanggal expired)','Tidak berlaku']],['File MoU (PDF/Word/Excel/gambar)'+(x&&x.fileName?' - sekarang: '+esc(x.fileName)+' (kosongkan bila tidak diganti)':''),'file']];
-  dlgOpen((x?'Edit':'Tambah')+' MoU',cols,x?[x.plant,x.scope,x.vendor,x.no,x.exp,x.manual==='Tidak berlaku'?'Tidak berlaku':'Otomatis (dari tanggal expired)',''] : [PLANTS[0],'','','','','',''],
+  const cols=[['Plant','sel',PLANTS.includes(x&&x.plant)||!x?PLANTS:[...PLANTS,x.plant]],['Ruang Lingkup'],['Nama Vendor'],['Expired','date'],['Status','sel',['Otomatis (dari tanggal expired)','Tidak berlaku']],['File MoU (PDF/Word/Excel/gambar)'+(x&&x.fileName?' - sekarang: '+esc(x.fileName)+' (kosongkan bila tidak diganti)':''),'file']];
+  dlgOpen((x?'Edit':'Tambah')+' MoU',cols,x?[x.plant,x.scope,x.vendor,x.exp,x.manual==='Tidak berlaku'?'Tidak berlaku':'Otomatis (dari tanggal expired)',''] : [PLANTS[0],'','','','',''],
     async v=>{
       if(!v[2]){alert('Nama vendor wajib diisi.');return false}
-      const fi=fields.querySelectorAll('.fld')[6].querySelector('input'),f=fi&&fi.files[0];let file=null;
+      const fi=fields.querySelectorAll('.fld')[5].querySelector('input'),f=fi&&fi.files[0];let file=null;
       if(f){
         if(!/\.(pdf|docx?|xlsx?|jpe?g|png)$/i.test(f.name)){alert('File harus PDF, Word, Excel, atau gambar (JPG/PNG).');return false}
         if(f.size>25*1048576){alert('File terlalu besar (maksimal 25 MB).');return false}
         const b64=await new Promise((ok,no)=>{const r=new FileReader();r.onload=()=>ok(String(r.result).split(',')[1]||'');r.onerror=()=>no(new Error('Gagal membaca file.'));r.readAsDataURL(f)});
         file={name:f.name,b64}}
-      const j=await mouPost({action:'mouSave',id:x?x.id:'',plant:v[0],scope:v[1],vendor:v[2],no:v[3],exp:v[4],manual:v[5]==='Tidak berlaku'?'Tidak berlaku':'',file});
+      const j=await mouPost({action:'mouSave',id:x?x.id:'',plant:v[0],scope:v[1],vendor:v[2],no:x?x.no:'',exp:v[3],manual:v[4]==='Tidak berlaku'?'Tidak berlaku':'',file});
       if(!j)return false;
       const k=MOU.findIndex(z=>z.id===j.row.id);if(k>=0)MOU[k]=j.row;else MOU.push(j.row)},false)}
 async function mouDel(i){
   if(!canDel())return deny();const x=window.MV2[i];
-  if(!confirm('Hapus MoU "'+x.vendor+' - '+(x.no||'')+'"?\nFile di Google Drive ikut dipindah ke Sampah.'))return;
+  if(!confirm('Hapus MoU "'+x.vendor+'"?\nFile di Google Drive ikut dipindah ke Sampah.'))return;
   const j=await mouPost({action:'mouDelete',id:x.id});if(!j)return;
   MOU=MOU.filter(z=>z.id!==x.id);render()}
 
@@ -1968,7 +1968,8 @@ function tfApply(t){
   const nc=t.tHead.rows[0].cells.length;
   [...t.tBodies[0].rows].forEach(r=>{
     if(r.cells.length!==nc){return}
-    r.style.display=f.every(([c,v,ex])=>{const x=tfText(r.cells[c]).toLowerCase();return ex?x===v:x.includes(v)})?'':'none'})}
+    r.style.display=f.every(([c,v,ex])=>{const x=tfText(r.cells[c]).toLowerCase();return ex?x===v:x.includes(v)})?'':'none'});
+  if(f.length&&t.tHead.rows[0].cells[0].textContent.trim().toUpperCase()==='NO'){let n=0;[...t.tBodies[0].rows].forEach(r=>{if(r.cells.length===nc&&r.style.display!=='none'&&/^\d+$/.test(r.cells[0].textContent.trim()))r.cells[0].textContent=++n})}}
 function tfInit(){
   if(typeof view==='undefined'||!view)return;
   [...view.querySelectorAll('table')].forEach((t,ti)=>{
