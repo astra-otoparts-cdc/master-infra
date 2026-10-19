@@ -1860,7 +1860,7 @@ const stkTime=ms=>new Date(ms).toLocaleString('id-ID',{day:'numeric',month:'long
 function renderStok(){
   title.textContent='Stok Level Consumable';crumb.textContent='Master Data Infra › Consumable';
   let h=`<div class="tools"><button class="sm" onclick="STK=null;stkErr='';loadStok();render()">↻ Muat ulang</button></div>`;
-  if(stkErr)h+=`<div class="card empty" style="color:var(--r);margin-bottom:12px">${esc(stkErr)}</div>`;
+  if(stkErr)h+=`<div class="card empty" style="color:var(--r);margin-bottom:12px">${esc(stkErr)}${/menghubungi|Waktu habis/i.test(stkErr)&&STOK_SCRIPT_URL?`<div class="l" style="margin-top:8px;color:var(--tx)">Pastikan Apps Script sudah di-deploy sebagai Web app dengan akses "Anyone" (bukan "Only myself"). Klik Tes koneksi: bila berhasil muncul teks JSON, bila gagal muncul halaman error Google.</div><div style="margin-top:8px"><a class="btnl p" href="${esc(STOK_SCRIPT_URL)}?action=stokInfo" target="_blank" rel="noopener">Tes koneksi Apps Script</a></div>`:''}</div>`;
   if(!STK&&!stkErr)h+='<div class="card empty">Memuat info file…</div>';
   else if(STK){
     h+=STK.exists
@@ -1918,7 +1918,7 @@ async function mouPost(payload){
 function renderMou(){
   title.textContent='MoU / Kerjasama';crumb.textContent='Master Data Infra › Legal';
   let h='';
-  if(mouErr)h+=`<div class="card empty" style="color:var(--r);margin-bottom:12px">${esc(mouErr)}</div>`;
+  if(mouErr)h+=`<div class="card empty" style="color:var(--r);margin-bottom:12px">${esc(mouErr)}${/menghubungi|Waktu habis/i.test(mouErr)&&MOU_SCRIPT_URL?`<div class="l" style="margin-top:8px;color:var(--tx)">Pastikan Apps Script sudah di-deploy sebagai Web app dengan akses "Anyone" (bukan "Only myself"). Klik Tes koneksi: bila berhasil muncul teks JSON, bila gagal muncul halaman error Google.</div><div style="margin-top:8px"><a class="btnl p" href="${esc(MOU_SCRIPT_URL)}?action=mouList" target="_blank" rel="noopener">Tes koneksi Apps Script</a></div>`:''}</div>`;
   if(!MOU){view.innerHTML=h+(mouErr?'':'<div class="card empty">Memuat data MoU…</div>');return}
   const all=MOU.map((x,i)=>({...x,st:mouStat(x),_i:i})),cnt=s=>all.filter(x=>x.st===s).length;
   const plants=[...new Set([...PLANTS,...all.map(x=>x.plant)])];
