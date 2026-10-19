@@ -116,6 +116,9 @@ body.r2 .dl,body.r3 .dl,body.r4 .dl{display:none!important}
 .glinks{display:flex;justify-content:space-between;gap:10px;margin-top:14px;font-size:13px}.glinks a{color:var(--pri);cursor:pointer}
 .rolebox{margin-top:14px;font-size:13px;line-height:1.6}
 .tf th{padding:4px 6px!important;background:var(--card);position:static!important;top:auto!important;font-weight:400}.tf input,.tf select{width:100%;min-width:64px;font-size:12px;padding:3px 6px;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--tx);box-sizing:border-box}
+.sdw{max-height:calc(100vh - 120px);overflow:auto}.sdt{border-collapse:separate;border-spacing:0}
+.sdt thead th{position:sticky;z-index:3;background:var(--card);border-right:1px solid var(--line)}.sdt thead tr:first-child th{top:0}.sdt thead tr:nth-child(2) th{top:var(--h1,30px)}
+.sdt td{border-bottom:1px solid var(--line)}
 .sdt th,.sdt td{padding:6px 10px;white-space:nowrap;font-size:12.5px}.sdt thead th{text-align:center;border-bottom:1px solid var(--line)}.sdt td.r{text-align:right}
 </style>
 </head>
@@ -1871,7 +1874,7 @@ function renderStok(){
     <div class="l" style="margin:4px 0 10px">Format .xlsx, .xls, .xlsm atau .csv. File lama otomatis dihapus (dipindah ke Sampah Google Drive) dan diganti file yang baru.</div>
     <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center"><input type="file" id="stk_f" accept=".xlsx,.xls,.xlsm,.csv" style="max-width:340px"><button class="p" id="stk_b" onclick="stokUp()"${stkBusy?' disabled':''}>${stkBusy?'Mengunggah…':'Upload'}</button></div>${inf}</div>`;
   h+=sdHtml();
-  view.innerHTML=h}
+  view.innerHTML=h;sdFix()}
 async function stokUp(){
   const inp=document.getElementById('stk_f'),f=inp&&inp.files[0];
   if(!f){alert('Pilih file Excel terlebih dahulu.');return}
@@ -1933,7 +1936,8 @@ function sdParse(ws,updated){
     labels.push(par&&par.rs===2?par.t:(par&&par.t&&sub&&sub.t&&par.t!==sub.t?par.t+' › '+sub.t:(sub&&sub.t)||(par&&par.t)||'Kolom '+(c+1)))}
   const rows=[];
   for(let r=D0;r<=rg.e.r&&rows.length<5000;r++){const row=[];let any=false;for(let c=0;c<=lastC;c++){const v=tx(r,c);if(v)any=true;row.push(v)}if(any)rows.push(row)}
-  return {updated,stats,cells,labels,rows,cols:lastC+1}}
+  const groups=cells.filter(x=>x.row===0).map(x=>({c:x.c,cs:x.cs,t:x.t||labels[x.c]}));
+  return {updated,stats,cells,labels,groups,rows,cols:lastC+1}}
 const sdNum=v=>/^-?[\d.,]+\s*%?$/.test(v);
 let sdHide=new Set();try{sdHide=new Set(JSON.parse(localStorage.getItem('mi_sd_hide')||'[]'))}catch(e){}
 function sdVis(){const a=[];for(let c=0;c<SD.cols;c++)if(!sdHide.has(c))a.push(c);return a}
@@ -1948,10 +1952,11 @@ function sdRowsHtml(){
   return rows.map(r=>'<tr>'+vis.map(c=>`<td${sdNum(r[c])?' class="r"':''}>${esc(r[c])}</td>`).join('')+'</tr>').join('')||`<tr><td colspan="${vis.length||1}" class="empty">Tidak ada data</td></tr>`}
 function sdFilter(el){sdQ=el.value;const tb=document.getElementById('sd_tb');if(tb)tb.innerHTML=sdRowsHtml()}
 function sdSave(){try{localStorage.setItem('mi_sd_hide',JSON.stringify([...sdHide]))}catch(e){}
-  const w=document.getElementById('sd_tw');if(w)w.innerHTML=sdTableHtml();
+  const w=document.getElementById('sd_tw');if(w){w.innerHTML=sdTableHtml();sdFix()}
   const n=document.getElementById('sd_cn');if(n)n.textContent=sdHide.size?`Kolom (${SD.cols-sdHide.size}/${SD.cols})`:'Kolom'}
-function sdCol(c,on){on?sdHide.delete(c):sdHide.add(c);sdSave()}
-function sdAll(on){sdHide=on?new Set():new Set(SD.labels.map((_,i)=>i));SD.labels.forEach((_,i)=>{const e=document.getElementById('sdc'+i);if(e)e.checked=on});sdSave()}
+function sdCol(g,on){const x=SD.groups[g];for(let c=x.c;c<x.c+x.cs;c++)on?sdHide.delete(c):sdHide.add(c);sdSave()}
+function sdAll(on){sdHide=on?new Set():new Set(SD.labels.map((_,i)=>i));SD.groups.forEach((_,i)=>{const e=document.getElementById('sdc'+i);if(e)e.checked=on});sdSave()}
+function sdFix(){const t=document.querySelector('table.sdt');if(t&&t.rows.length>1)t.style.setProperty('--h1',t.rows[0].getBoundingClientRect().height+'px')}
 function sdPanel(){const p=document.getElementById('sd_pn');if(p)p.style.display=p.style.display==='block'?'none':'block'}
 document.addEventListener('click',e=>{const p=document.getElementById('sd_pn');if(p&&p.style.display==='block'&&!e.target.closest('#sd_cw'))p.style.display='none'});
 function sdHtml(){
@@ -1965,9 +1970,9 @@ function sdHtml(){
     <span id="sd_cw" style="position:relative"><button class="sm" onclick="sdPanel()" id="sd_cn">${sdHide.size?`Kolom (${SD.cols-sdHide.size}/${SD.cols})`:'Kolom'}</button>
       <div id="sd_pn" class="card" style="display:none;position:absolute;left:0;top:calc(100% + 6px);z-index:30;width:min(560px,90vw);max-height:360px;overflow:auto;box-shadow:0 8px 24px rgba(0,0,0,.25)">
         <div style="display:flex;gap:8px;margin-bottom:8px"><button class="sm" onclick="sdAll(true)">Pilih semua</button><button class="sm" onclick="sdAll(false)">Kosongkan</button></div>
-        <div class="chk">${SD.labels.map((l,i)=>`<label><input type="checkbox" id="sdc${i}" ${sdHide.has(i)?'':'checked'} onchange="sdCol(${i},this.checked)"> ${esc(l)}</label>`).join('')}</div></div></span>
+        <div class="chk">${SD.groups.map((x,i)=>{let v=0;for(let c=x.c;c<x.c+x.cs;c++)if(!sdHide.has(c))v++;return `<label><input type="checkbox" id="sdc${i}" ${v?'checked':''} onchange="sdCol(${i},this.checked)"> ${esc(x.t)}</label>`}).join('')}</div></div></span>
     <span class="l">${SD.rows.length} baris · sheet "Stock level CON"</span></div>
-  <div class="wrap" id="sd_tw">${sdTableHtml()}</div>`}
+  <div class="wrap sdw" id="sd_tw">${sdTableHtml()}</div>`}
 
 // ---------- MoU / Kerjasama (database + file di folder Google Drive, lewat Apps Script terpisah) ----------
 let MOU=null,mouErr='',mouQ='',mouPl='',mouSt='',mouBusy=false,MOU_DB='';
