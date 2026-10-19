@@ -1862,16 +1862,14 @@ function renderStok(){
   title.textContent='Stok Level';crumb.textContent='Master Data Infra › Consumable';
   let h=`<div class="tools"><button class="sm" onclick="STK=null;SD=null;stkErr='';sdErr='';loadStok();render()">↻ Muat ulang</button></div>`;
   if(stkErr)h+=`<div class="card empty" style="color:var(--r);margin-bottom:12px">${esc(stkErr)}${/menghubungi|Waktu habis/i.test(stkErr)&&STOK_SCRIPT_URL?`<div class="l" style="margin-top:8px;color:var(--tx)">Pastikan Apps Script sudah di-deploy sebagai Web app dengan akses "Anyone" (bukan "Only myself"). Klik Tes koneksi: bila berhasil muncul teks JSON, bila gagal muncul halaman error Google.</div><div style="margin-top:8px"><a class="btnl p" href="${esc(STOK_SCRIPT_URL)}?action=stokInfo" target="_blank" rel="noopener">Tes koneksi Apps Script</a></div>`:''}</div>`;
-  if(!STK&&!stkErr)h+='<div class="card empty">Memuat info file…</div>';
-  else if(STK){
-    h+=STK.exists
-      ?`<div class="card info"><div><div class="l" style="margin-bottom:4px">File saat ini</div><b>📄 ${esc(STK.name)}</b><div class="l" style="margin-top:4px">${stkSize(STK.size)}</div></div>
-        <div><div class="l" style="margin-bottom:4px">Last updated</div><b>${stkTime(STK.updated)}</b>${STK.by?`<div class="l" style="margin-top:4px">oleh ${esc(STK.by)}</div>`:''}</div>
-        <div><a class="btnl p" href="${esc(STK.url)}" target="_blank" rel="noopener">Buka / unduh file</a></div></div>`
-      :'<div class="card empty" style="margin-bottom:12px">Belum ada file. Upload file Excel pertama di bawah.</div>'}
-  h+=`<div class="card" style="margin-top:12px"><b>Upload file baru</b>
+  let inf='';
+  if(!STK&&!stkErr)inf='<div class="l" style="margin-top:12px">Memuat info file…</div>';
+  else if(STK)inf=STK.exists
+    ?`<div class="l" style="margin-top:12px;display:flex;gap:6px 14px;flex-wrap:wrap;align-items:center;color:var(--tx)"><span>Last updated: <b>${stkTime(STK.updated)}</b></span><span>File: <b>📄 ${esc(STK.name)}</b></span>${STK.by?`<span>Oleh: <b>${esc(STK.by)}</b></span>`:''}<a class="btnl p" href="${esc(STK.url)}" target="_blank" rel="noopener">Buka / unduh</a></div>`
+    :'<div class="l" style="margin-top:12px">Belum ada file. Upload file Excel pertama.</div>';
+  h+=`<div class="card"><b>Upload file baru</b>
     <div class="l" style="margin:4px 0 10px">Format .xlsx, .xls, .xlsm atau .csv. File lama otomatis dihapus (dipindah ke Sampah Google Drive) dan diganti file yang baru.</div>
-    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center"><input type="file" id="stk_f" accept=".xlsx,.xls,.xlsm,.csv" style="max-width:340px"><button class="p" id="stk_b" onclick="stokUp()"${stkBusy?' disabled':''}>${stkBusy?'Mengunggah…':'Upload'}</button></div></div>`;
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center"><input type="file" id="stk_f" accept=".xlsx,.xls,.xlsm,.csv" style="max-width:340px"><button class="p" id="stk_b" onclick="stokUp()"${stkBusy?' disabled':''}>${stkBusy?'Mengunggah…':'Upload'}</button></div>${inf}</div>`;
   h+=sdHtml();
   view.innerHTML=h}
 async function stokUp(){
