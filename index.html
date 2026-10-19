@@ -261,7 +261,7 @@ function render(){
     let h='';
     for(const g of GRP){h+=`<h3>${ICON[g]} ${g}</h3><div class="cards" style="margin-bottom:20px">`;
       for(const k in ALL)if(ALL[k].g===g){
-        const isL=k==='leader',n=k==='mou'?(MOU?MOU.length:'…'):k==='stok'?(STK?(STK.exists?'✓':'–'):'…'):isL?(SH?SH.length:'…'):k==='apar'?(AM?AM.length:'…'):k==='hydrant'?(YM?YM.length:'…'):D[k].length,al=k==='mou'?(MOU?MOU.filter(x=>['Habis','Akan habis'].includes(mouStat(x))).length:0):k==='stok'?0:isL?(SH?SH.filter(r=>r.risk==='A').length:0):k==='apar'?(AM?AM.filter(r=>expState(r)==='bad').length:0):k==='hydrant'?0:D[k].filter(r=>cls(r[r.length-1])==='bad').length;
+        const isL=k==='leader',n=k==='mou'?(MOU?MOU.filter(x=>mouStat(x)!=='Tidak berlaku').length:'…'):k==='stok'?(STK?(STK.exists?'✓':'–'):'…'):isL?(SH?SH.length:'…'):k==='apar'?(AM?AM.length:'…'):k==='hydrant'?(YM?YM.length:'…'):D[k].length,al=k==='mou'?(MOU?MOU.filter(x=>['Habis','Akan habis'].includes(mouStat(x))).length:0):k==='stok'?0:isL?(SH?SH.filter(r=>r.risk==='A').length:0):k==='apar'?(AM?AM.filter(r=>expState(r)==='bad').length:0):k==='hydrant'?0:D[k].filter(r=>cls(r[r.length-1])==='bad').length;
         h+=`<div class="card k" onclick="go('${k}')"><div class="n">${n}</div><div class="l">${isL?'Temuan Safety Patrol (Leader)':ALL[k].t}</div><div class="l" style="color:var(--r);margin-top:4px">${al?al+(isL?' risiko rank A':' perlu perhatian'):'&nbsp;'}</div></div>`}
       h+='</div>'}
     view.innerHTML=h;return}
@@ -1925,7 +1925,7 @@ function renderMou(){
   const qq=mouQ.toLowerCase();
   const rows=all.filter(x=>(!mouPl||x.plant===mouPl)&&(!mouSt||x.st===mouSt)&&(!qq||[x.plant,x.scope,x.vendor].join(' ').toLowerCase().includes(qq)))
     .sort((a,b)=>b._i-a._i);   // terbaru diisi di paling atas
-  h+=`<div class="cards" style="margin-bottom:14px"><div class="card k"><div class="n">${all.length}</div><div class="l">Total MoU</div></div>${MOU_ST.map(s=>`<div class="card k" onclick="mouSt='${mouSt===s?'':s}';render()"><div class="n">${cnt(s)}</div><div class="l">${s}</div></div>`).join('')}</div>`;
+  h+=`<div class="cards" style="margin-bottom:14px"><div class="card k"><div class="n">${all.length-cnt('Tidak berlaku')}</div><div class="l">Total MoU</div></div>${MOU_ST.map(s=>`<div class="card k" onclick="mouSt='${mouSt===s?'':s}';render()"><div class="n">${cnt(s)}</div><div class="l">${s}</div></div>`).join('')}</div>`;
   h+=`<div class="tools"><input class="s" style="max-width:300px" placeholder="Cari vendor, ruang lingkup..." value="${esc(mouQ)}" oninput="mouQ=this.value;rs(this)">
     <select style="width:auto;min-width:150px" onchange="mouPl=this.value;render()"><option value="">Semua Plant</option>${plants.map(p=>`<option${p===mouPl?' selected':''}>${esc(p)}</option>`).join('')}</select>
     <select style="width:auto;min-width:150px" onchange="mouSt=this.value;render()"><option value="">Semua status</option>${MOU_ST.map(s=>`<option${s===mouSt?' selected':''}>${s}</option>`).join('')}</select>
@@ -1937,7 +1937,7 @@ function renderMou(){
     <td>${x.fileUrl?`<a href="${esc(x.fileUrl)}" target="_blank" rel="noopener" title="${esc(x.fileName)}">📎 Buka file</a>`:'<span class="l">-</span>'}</td>
     <td><button class="sm" onclick="mouEdit(${i})">Edit</button> <button class="sm dl" onclick="mouDel(${i})">Hapus</button></td></tr>`});
   if(!rows.length)h+=`<tr><td colspan="8" class="empty">${all.length?'Tidak ada data pada filter ini':'Belum ada data MoU. Klik + Tambah.'}</td></tr>`;
-  view.innerHTML=h+'</tbody></table></div><div class="l" style="margin-top:8px">Status otomatis dari tanggal expired: Aktif, Akan habis (sisa ≤ '+MOU_WARN+' hari), Habis (lewat tanggal expired). "Tidak berlaku" dipilih manual.</div>'}
+  view.innerHTML=h+'</tbody></table></div><div class="l" style="margin-top:8px">Status otomatis dari tanggal expired: Aktif, Akan habis (sisa ≤ '+MOU_WARN+' hari), Habis (lewat tanggal expired). "Tidak berlaku" dipilih manual dan tidak dihitung ke Total MoU.</div>'}
 function mouEdit(i){
   const x=i>=0?window.MV2[i]:null;
   const cols=[['Plant','sel',PLANTS.includes(x&&x.plant)||!x?PLANTS:[...PLANTS,x.plant]],['Ruang Lingkup'],['Nama Vendor'],['Expired','date'],['Status','sel',['Otomatis (dari tanggal expired)','Tidak berlaku']],['File MoU (PDF/Word/Excel/gambar)'+(x&&x.fileName?' - sekarang: '+esc(x.fileName)+' (kosongkan bila tidak diganti)':''),'file']];
