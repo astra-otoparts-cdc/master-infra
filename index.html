@@ -115,6 +115,7 @@ body.r2 .dl,body.r3 .dl,body.r4 .dl{display:none!important}
 .gbtn{width:100%;padding:12px;font-size:16px}
 .glinks{display:flex;justify-content:space-between;gap:10px;margin-top:14px;font-size:13px}.glinks a{color:var(--pri);cursor:pointer}
 .rolebox{margin-top:14px;font-size:13px;line-height:1.6}
+.tf th{padding:4px 6px!important;background:var(--card);position:static!important;top:auto!important;font-weight:400}.tf input,.tf select{width:100%;min-width:64px;font-size:12px;padding:3px 6px;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--tx);box-sizing:border-box}
 </style>
 </head>
 <body>
@@ -158,6 +159,7 @@ const SHEET_ID='10yxuxmay6aQ8Gx01videkRj0roRK6iNHfPtZgRtUvfg',SHEET_TAB='Form Re
 const SHEET_URL='https://docs.google.com/spreadsheets/d/'+SHEET_ID+'/edit?usp=sharing';
 // ===== KONFIGURASI =====
 // Tempel URL Web App Apps Script (hasil Deploy dari Code.gs) di antara tanda kutip agar Edit/Hapus/Member/Zona tersimpan ke Google Sheets.
+const MOU_SCRIPT_URL='https://script.google.com/macros/s/AKfycbzjnA8mNthdz19Sr49-FxaccpfEXXBPSEMS4mfrwwSEB4aXAvFqoAwI-YZWgVwHeO6L/exec';   // Apps Script TERPISAH khusus MoU / Kerjasama (tempel Web App URL dari Code-MoU.gs)
 const STOK_SCRIPT_URL='https://script.google.com/macros/s/AKfycbwbf2gzSWSGOH30z7RjD2ePcnsMDTNAjK3fKJtsoKmmtXfX9DTrDmPPEMeA8lSD3yJZ/exec';   // Apps Script TERPISAH khusus Stok Level Consumable (tempel Web App URL dari Code-Stok.gs)
 const APPS_SCRIPT_URL='https://script.google.com/macros/s/AKfycbw7k7iV_hUFEBDknFy_l-FUUkIqpxXfxWLVnqqQ39f393LscRFk5onWsC_0xKHzH_1B/exec';   // Safety Patrol (spreadsheet temuan)
 const HYDRANT_SCRIPT_URL='firebase:hydrant';   // Checksheet Hydrant kini memakai Firebase (project terpisah), lihat blok script module kedua di bagian bawah file
@@ -259,12 +261,13 @@ function render(){
     let h='';
     for(const g of GRP){h+=`<h3>${ICON[g]} ${g}</h3><div class="cards" style="margin-bottom:20px">`;
       for(const k in ALL)if(ALL[k].g===g){
-        const isL=k==='leader',n=k==='stok'?(STK?(STK.exists?'✓':'–'):'…'):isL?(SH?SH.length:'…'):k==='apar'?(AM?AM.length:'…'):k==='hydrant'?(YM?YM.length:'…'):D[k].length,al=k==='stok'?0:isL?(SH?SH.filter(r=>r.risk==='A').length:0):k==='apar'?(AM?AM.filter(r=>expState(r)==='bad').length:0):k==='hydrant'?0:D[k].filter(r=>cls(r[r.length-1])==='bad').length;
+        const isL=k==='leader',n=k==='mou'?(MOU?MOU.length:'…'):k==='stok'?(STK?(STK.exists?'✓':'–'):'…'):isL?(SH?SH.length:'…'):k==='apar'?(AM?AM.length:'…'):k==='hydrant'?(YM?YM.length:'…'):D[k].length,al=k==='mou'?(MOU?MOU.filter(x=>['Habis','Akan habis'].includes(mouStat(x))).length:0):k==='stok'?0:isL?(SH?SH.filter(r=>r.risk==='A').length:0):k==='apar'?(AM?AM.filter(r=>expState(r)==='bad').length:0):k==='hydrant'?0:D[k].filter(r=>cls(r[r.length-1])==='bad').length;
         h+=`<div class="card k" onclick="go('${k}')"><div class="n">${n}</div><div class="l">${isL?'Temuan Safety Patrol (Leader)':ALL[k].t}</div><div class="l" style="color:var(--r);margin-top:4px">${al?al+(isL?' risiko rank A':' perlu perhatian'):'&nbsp;'}</div></div>`}
       h+='</div>'}
     view.innerHTML=h;return}
   if(cur==='fb')return renderFB();
   if(cur==='stok')return renderStok();
+  if(cur==='mou')return renderMou();
   if(cur==='setting')return renderSetting();
   const p=ALL[cur];title.textContent=cur==='leader'?'Leader - Safety Patrol':p.t;
   crumb.textContent='Master Data Infra › '+p.g+(p.parent?' › '+PL[p.parent]:'');
@@ -1800,7 +1803,7 @@ async function startGate(){
 }
 function bootApp(){
   if(!canMaster()){if(aTab==='master')aTab='hasil';if(yTab==='master')yTab='hasil'}
-  nav();render();loadSheet();loadFB();loadStok();loadZones();loadInfo();loadPlants();loadAparMaster();loadHydMaster();if(cur==='apar')loadAparResults();if(cur==='hydrant')loadHydResults()}
+  nav();render();loadSheet();loadFB();loadStok();loadMou();loadZones();loadInfo();loadPlants();loadAparMaster();loadHydMaster();if(cur==='apar')loadAparResults();if(cur==='hydrant')loadHydResults()}
 
 
 // ---------- halaman Feedback Temuan (role User) ----------
@@ -1886,6 +1889,107 @@ async function stokUp(){
     STK=j;stkErr='';toast('File berhasil diunggah ✓')
   }catch(e){tst.hidden=true;alert('Gagal mengunggah: '+e.message+(e instanceof TypeError?'\nPeriksa URL Apps Script dan pastikan Code.gs sudah di-deploy versi terbaru.':''))}
   stkBusy=false;if(cur==='stok')render()}
+
+
+// ---------- MoU / Kerjasama (database + file di folder Google Drive, lewat Apps Script terpisah) ----------
+let MOU=null,mouErr='',mouQ='',mouPl='',mouSt='',mouBusy=false,MOU_DB='';
+const MOU_WARN=90;   // "Akan habis" bila sisa waktu <= 90 hari
+const MOU_ST=['Aktif','Akan habis','Habis','Tidak berlaku'];
+function mouStat(x){
+  if(x.manual==='Tidak berlaku')return 'Tidak berlaku';
+  if(!x.exp)return 'Aktif';
+  const d=Math.round((new Date(x.exp+'T00:00:00')-new Date(today+'T00:00:00'))/864e5);
+  return d<0?'Habis':d<=MOU_WARN?'Akan habis':'Aktif'}
+const mouCls=st=>st==='Aktif'?'good':st==='Akan habis'?'warn':st==='Habis'?'bad':'neu';
+function loadMou(){
+  if(!MOU_SCRIPT_URL){mouErr='URL Apps Script MoU belum diisi di index.html (MOU_SCRIPT_URL). Lihat petunjuk di Code-MoU.gs.';if(cur==='mou')render();return}
+  jsonp({action:'mouList'},MOU_SCRIPT_URL).then(j=>{if(!j||!j.ok)throw new Error((j&&j.error)||'Gagal membaca data MoU.');MOU=j.rows;MOU_DB=j.dbUrl||'';mouErr=''})
+    .catch(e=>{mouErr=e.message}).finally(()=>{if(cur==='mou'||cur==='home')render()})}
+async function mouPost(payload){
+  if(!MOU_SCRIPT_URL){alert('URL Apps Script MoU belum diisi di index.html (MOU_SCRIPT_URL).');return null}
+  const pin=getPin('mi_pin_mou');if(!pin)return null;
+  toast('Menyimpan ke Google Drive…');
+  try{
+    const res=await fetch(MOU_SCRIPT_URL,{method:'POST',mode:'cors',redirect:'follow',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({...payload,by:ME?(ME.nama||ME.username):'',pin})});
+    const j=await res.json();
+    if(!j.ok){if(j.error==='PIN'){try{sessionStorage.removeItem('mi_pin_mou')}catch(e){}throw new Error('PIN salah.')}throw new Error(j.error||'Gagal menyimpan')}
+    toast('Tersimpan ✓');return j
+  }catch(e){tst.hidden=true;alert('Gagal menyimpan: '+e.message+(e instanceof TypeError?'\nPeriksa URL Apps Script dan pastikan Code-MoU.gs sudah di-deploy versi terbaru.':''));return null}}
+function renderMou(){
+  title.textContent='MoU / Kerjasama';crumb.textContent='Master Data Infra › Legal';
+  let h='';
+  if(mouErr)h+=`<div class="card empty" style="color:var(--r);margin-bottom:12px">${esc(mouErr)}</div>`;
+  if(!MOU){view.innerHTML=h+(mouErr?'':'<div class="card empty">Memuat data MoU…</div>');return}
+  const all=MOU.map(x=>({...x,st:mouStat(x)})),cnt=s=>all.filter(x=>x.st===s).length;
+  const plants=[...new Set([...PLANTS,...all.map(x=>x.plant)])];
+  const qq=mouQ.toLowerCase();
+  const rows=all.filter(x=>(!mouPl||x.plant===mouPl)&&(!mouSt||x.st===mouSt)&&(!qq||[x.plant,x.scope,x.vendor,x.no].join(' ').toLowerCase().includes(qq)))
+    .sort((a,b)=>(a.exp||'9999').localeCompare(b.exp||'9999'));
+  h+=`<div class="cards" style="margin-bottom:14px"><div class="card k"><div class="n">${all.length}</div><div class="l">Total MoU</div></div>${MOU_ST.map(s=>`<div class="card k" onclick="mouSt='${mouSt===s?'':s}';render()"><div class="n">${cnt(s)}</div><div class="l">${s}</div></div>`).join('')}</div>`;
+  h+=`<div class="tools"><input class="s" style="max-width:300px" placeholder="Cari vendor, nomor MoU, ruang lingkup..." value="${esc(mouQ)}" oninput="mouQ=this.value;rs(this)">
+    <select style="width:auto;min-width:150px" onchange="mouPl=this.value;render()"><option value="">Semua Plant</option>${plants.map(p=>`<option${p===mouPl?' selected':''}>${esc(p)}</option>`).join('')}</select>
+    <select style="width:auto;min-width:150px" onchange="mouSt=this.value;render()"><option value="">Semua status</option>${MOU_ST.map(s=>`<option${s===mouSt?' selected':''}>${s}</option>`).join('')}</select>
+    <button class="sm" onclick="MOU=null;mouErr='';loadMou();render()">↻ Muat ulang</button>${MOU_DB?` <a class="btnl" href="${esc(MOU_DB)}" target="_blank" rel="noopener">Buka database</a>`:''}
+    <button class="p" onclick="mouEdit(-1)">+ Tambah</button></div>`;
+  window.MV2=rows;
+  h+=`<div class="wrap"><table><thead><tr><th>NO</th><th>PLANT</th><th>RUANG LINGKUP</th><th>NAMA VENDOR</th><th>NOMOR MOU</th><th>EXPIRED</th><th>STATUS</th><th>FILE</th><th></th></tr></thead><tbody>`;
+  rows.forEach((x,i)=>{h+=`<tr><td class="c">${i+1}</td><td>${esc(x.plant)}</td><td>${esc(x.scope)}</td><td><b>${esc(x.vendor)}</b></td><td>${esc(x.no)}</td><td>${x.exp?fmtD(x.exp):'-'}</td><td><span class="b ${mouCls(x.st)}">${x.st}</span></td>
+    <td>${x.fileUrl?`<a href="${esc(x.fileUrl)}" target="_blank" rel="noopener" title="${esc(x.fileName)}">📎 Buka file</a>`:'<span class="l">-</span>'}</td>
+    <td><button class="sm" onclick="mouEdit(${i})">Edit</button> <button class="sm dl" onclick="mouDel(${i})">Hapus</button></td></tr>`});
+  if(!rows.length)h+=`<tr><td colspan="9" class="empty">${all.length?'Tidak ada data pada filter ini':'Belum ada data MoU. Klik + Tambah.'}</td></tr>`;
+  view.innerHTML=h+'</tbody></table></div><div class="l" style="margin-top:8px">Status otomatis dari tanggal expired: Aktif, Akan habis (sisa ≤ '+MOU_WARN+' hari), Habis (lewat tanggal expired). "Tidak berlaku" dipilih manual.</div>'}
+function mouEdit(i){
+  const x=i>=0?window.MV2[i]:null;
+  const cols=[['Plant','sel',PLANTS.includes(x&&x.plant)||!x?PLANTS:[...PLANTS,x.plant]],['Ruang Lingkup'],['Nama Vendor'],['Nomor MoU'],['Expired','date'],['Status','sel',['Otomatis (dari tanggal expired)','Tidak berlaku']],['File MoU (PDF/Word/Excel/gambar)'+(x&&x.fileName?' - sekarang: '+esc(x.fileName)+' (kosongkan bila tidak diganti)':''),'file']];
+  dlgOpen((x?'Edit':'Tambah')+' MoU',cols,x?[x.plant,x.scope,x.vendor,x.no,x.exp,x.manual==='Tidak berlaku'?'Tidak berlaku':'Otomatis (dari tanggal expired)',''] : [PLANTS[0],'','','','','',''],
+    async v=>{
+      if(!v[2]){alert('Nama vendor wajib diisi.');return false}
+      const fi=fields.querySelectorAll('.fld')[6].querySelector('input'),f=fi&&fi.files[0];let file=null;
+      if(f){
+        if(!/\.(pdf|docx?|xlsx?|jpe?g|png)$/i.test(f.name)){alert('File harus PDF, Word, Excel, atau gambar (JPG/PNG).');return false}
+        if(f.size>25*1048576){alert('File terlalu besar (maksimal 25 MB).');return false}
+        const b64=await new Promise((ok,no)=>{const r=new FileReader();r.onload=()=>ok(String(r.result).split(',')[1]||'');r.onerror=()=>no(new Error('Gagal membaca file.'));r.readAsDataURL(f)});
+        file={name:f.name,b64}}
+      const j=await mouPost({action:'mouSave',id:x?x.id:'',plant:v[0],scope:v[1],vendor:v[2],no:v[3],exp:v[4],manual:v[5]==='Tidak berlaku'?'Tidak berlaku':'',file});
+      if(!j)return false;
+      const k=MOU.findIndex(z=>z.id===j.row.id);if(k>=0)MOU[k]=j.row;else MOU.push(j.row)},false)}
+async function mouDel(i){
+  if(!canDel())return deny();const x=window.MV2[i];
+  if(!confirm('Hapus MoU "'+x.vendor+' - '+(x.no||'')+'"?\nFile di Google Drive ikut dipindah ke Sampah.'))return;
+  const j=await mouPost({action:'mouDelete',id:x.id});if(!j)return;
+  MOU=MOU.filter(z=>z.id!==x.id);render()}
+
+
+// ---------- filter per kolom (otomatis di semua tabel sederhana) ----------
+const TF={};
+const tfText=td=>{const sl=td.querySelector&&td.querySelector('select');return (sl&&sl.selectedIndex>=0?sl.options[sl.selectedIndex].text:td.textContent).trim()};
+function tfApply(t){
+  const f=[...t.querySelectorAll('.tf [data-c]')].map(e=>[+e.dataset.c,e.value.trim().toLowerCase(),e.tagName==='SELECT']).filter(x=>x[1]);
+  const nc=t.tHead.rows[0].cells.length;
+  [...t.tBodies[0].rows].forEach(r=>{
+    if(r.cells.length!==nc){return}
+    r.style.display=f.every(([c,v,ex])=>{const x=tfText(r.cells[c]).toLowerCase();return ex?x===v:x.includes(v)})?'':'none'})}
+function tfInit(){
+  if(typeof view==='undefined'||!view)return;
+  [...view.querySelectorAll('table')].forEach((t,ti)=>{
+    if(t.classList.contains('fd')||!t.tHead||t.tHead.rows.length!==1||!t.tBodies[0]||t.querySelector('.tf'))return;
+    const hs=[...t.tHead.rows[0].cells];if(hs.some(c=>c.colSpan>1||c.rowSpan>1))return;
+    const body=[...t.tBodies[0].rows].filter(r=>r.cells.length===hs.length);if(!body.length)return;
+    const tr=document.createElement('tr');tr.className='tf';
+    hs.forEach((h,c)=>{
+      const th=document.createElement('th'),name=h.textContent.trim();
+      if(name&&name.toUpperCase()!=='NO'&&!/^(AKSI|FOTO)$/i.test(name)){
+        const key=cur+'|'+ti+'|'+c,vals=[...new Set(body.map(r=>tfText(r.cells[c])))].filter(Boolean).sort((a,b)=>a.localeCompare(b,'id'));
+        let el;
+        if(vals.length>=1&&vals.length<=12&&body.length>vals.length){
+          el=document.createElement('select');el.innerHTML='<option value="">Semua</option>'+vals.map(v=>`<option>${esc(v)}</option>`).join('');
+        }else{el=document.createElement('input');el.placeholder='Filter…'}
+        el.dataset.c=c;if(TF[key]&&(el.tagName==='INPUT'||vals.includes(TF[key])))el.value=TF[key];
+        el.addEventListener(el.tagName==='SELECT'?'change':'input',()=>{TF[key]=el.value;tfApply(t)});
+        th.appendChild(el)}
+      tr.appendChild(th)});
+    t.tHead.appendChild(tr);tfApply(t)})}
+const __render0=render;render=function(){const r=__render0.apply(this,arguments);try{tfInit()}catch(e){}return r};
 
 // ---------- halaman Setting (kelola akun) ----------
 async function loadUsers(){if(usLoading)return;usLoading=true;
